@@ -44,24 +44,21 @@ boolean on = false;
 
 void timerCallback(void *pArg)
 {
-  on = !on;
+  uint32_t node_time_us = mesh.getNodeTime();
+  uint32_t node_time_ms = node_time_us / 1000ul;
+  uint32_t ms_per_cycle = 5000ul; //5 seconds
+  uint32_t local_ms = node_time_ms % ms_per_cycle;
 
-  if ( on )
-  {
-    for ( uint8_t i = 0; i < NPLEN; i++ ) {
-      strip.SetPixelColor(i, RgbColor( 50, 50, 50 ) );
+  
+  //local_ms hopefully should be smooth gradient over 5second
+  uint32_t brightness = local_ms * 255ul / ms_per_cycle;
+  byte brightness8 = brightness;
+
+  for ( uint8_t i = 0; i < NPLEN; i++ ) {
+      strip.SetPixelColor(i, RgbColor( brightness8, brightness8, brightness8 ) );
     }
-  }
-  else
-  {
-    for ( uint8_t i = 0; i < NPLEN; i++ ) {
-      strip.SetPixelColor(i, RgbColor( 0, 0, 0 ) );
-    }
-  }
 
-
-  strip.Show();
-
+   strip.Show();
 
 }
 
@@ -82,7 +79,7 @@ void setup() {
 
   //setup timer
   os_timer_setfn(&frameTimer, timerCallback, NULL);
-  os_timer_arm(&frameTimer, 1000, true); //1000ms, repeat = true;
+  os_timer_arm(&frameTimer, 33, true); //1000ms, repeat = true;
 }
 
 void loop() {
