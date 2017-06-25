@@ -3,7 +3,7 @@
 //
 // 1. sends a silly message to every node on the mesh at a random time betweew 1 and 5 seconds
 // 2. prints anything it recieves to Serial.print
-// 
+//
 //
 //************************************************************
 #include "painlessMesh.h"
@@ -30,7 +30,7 @@ uint32_t sent = 0;
 // Goertzel library
 int sensorPin = A0;
 const int N = 150;
-const float SAMPLING_FREQUENCY = 8000; 
+const float SAMPLING_FREQUENCY = 8000;
 
 //NeoPixelBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
@@ -38,6 +38,32 @@ NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 // ADC Data tmp location
 short sound_data[N];
 
+//timer
+os_timer_t frameTimer;
+boolean on = false;
+
+void timerCallback(void *pArg)
+{
+  on = !on;
+
+  if ( on )
+  {
+    for ( uint8_t i = 0; i < NPLEN; i++ ) {
+      strip.SetPixelColor(i, RgbColor( 50, 50, 50 ) );
+    }
+  }
+  else
+  {
+    for ( uint8_t i = 0; i < NPLEN; i++ ) {
+      strip.SetPixelColor(i, RgbColor( 0, 0, 0 ) );
+    }
+  }
+
+
+  strip.Show();
+
+
+}
 
 void setup() {
   Serial.begin(115200);
@@ -45,7 +71,7 @@ void setup() {
   strip.Begin();
   led_pattern();
 
-//mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
+  //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
   mesh.setDebugMsgTypes( ERROR | STARTUP );  // set before init() so that you can see startup messages
 
   mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT );
@@ -53,30 +79,34 @@ void setup() {
   mesh.onNewConnection(&newConnectionCallback);
   mesh.onChangedConnections(&changedConnectionCallback);
   mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
+
+  //setup timer
+  os_timer_setfn(&frameTimer, timerCallback, NULL);
+  os_timer_arm(&frameTimer, 1000, true); //1000ms, repeat = true;
 }
 
 void loop() {
   mesh.update();
 
- // get next random time to send a message
+  // get next random time to send a message
   if ( sendMessageTime == 0 ) {
     sendMessageTime = mesh.getNodeTime() + random( 1000000, 5000000 );
   }
 
   // if the time is ripe, send everyone a message!
-  if ( sendMessageTime != 0 && sendMessageTime < mesh.getNodeTime() ){
+  if ( sendMessageTime != 0 && sendMessageTime < mesh.getNodeTime() ) {
     String msg = "Hello from node ";
     msg += mesh.getNodeId();
     mesh.sendBroadcast( msg );
     sendMessageTime = 0;
   }
 
-  strip.Show();
+  //strip.Show();
 }
 
 void led_pattern() {
   for ( uint8_t i = 0; i < NPLEN; i++ ) {
-    strip.SetPixelColor(i, RgbColor( 0, 0, 0 ) );
+    strip.SetPixelColor(i, RgbColor( 50, i * 50, 0 ) );
   }
   strip.Show();
 }
@@ -86,13 +116,13 @@ void receivedCallback( uint32_t from, String &msg ) {
 }
 
 void newConnectionCallback(uint32_t nodeId) {
-    Serial.printf("--> startHere: New Connection, nodeId = %u\n", nodeId);
+  Serial.printf("--> startHere: New Connection, nodeId = %u\n", nodeId);
 }
 
 void changedConnectionCallback() {
-    Serial.printf("Changed connections %s\n",mesh.subConnectionJson().c_str());
+  Serial.printf("Changed connections %s\n", mesh.subConnectionJson().c_str());
 }
 
 void nodeTimeAdjustedCallback(int32_t offset) {
-    Serial.printf("Adjusted time %u. Offset = %d\n", mesh.getNodeTime(),offset);
+  Serial.printf("Adjusted time %u. Offset = %d\n", mesh.getNodeTime(), offset);
 }
