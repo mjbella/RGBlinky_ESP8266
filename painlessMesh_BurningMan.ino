@@ -47,13 +47,16 @@ boolean on = false;
 
 
 //state
-typedef enum { MODE_MESH, MODE_INDIVIDUAL } application_mode;
+typedef enum { MODE_MESH, MODE_INDIVIDUAL } application_mode_t;
 int currentState = 0;
-
 unsigned long timeOfNextStateChange = 0;
 int nextState = 0;
+application_mode_t AppMode = MODE_MESH;
 
 #define NUM_STATES  3
+#define ADVANCE_INDICATE_STATE (NUM_STATES+1)
+#define INDIVIDUAL_INDICATE_STATE (NUM_STATES+2)
+#define MESH_INDICATE_STATE (NUM_STATES+3)
 
 void timerCallback(void *pArg)
 {
@@ -75,27 +78,60 @@ void timerCallback(void *pArg)
   byte brightness = looped_time_ms * 50ul / ms_per_cycle;
 
 
+
   RgbColor color;
   if ( currentState == 0 )
   {
     color = RgbColor( brightness, 0, 0 );
+    for ( uint8_t i = 0; i < NPLEN; i++ ) {
+      strip.SetPixelColor(i, color );
+    }
   }
   else if ( currentState == 1 )
   {
     color = RgbColor( 0, brightness, 0 );
+    for ( uint8_t i = 0; i < NPLEN; i++ ) {
+      strip.SetPixelColor(i, color );
+    }
   }
   else if ( currentState == 2 )
   {
     color = RgbColor( 0, 0, brightness );
+    for ( uint8_t i = 0; i < NPLEN; i++ ) {
+      strip.SetPixelColor(i, color );
+    }
+  }
+  else if ( currentState == ADVANCE_INDICATE_STATE )
+  {
+    for ( uint8_t i = 0; i < NPLEN; i++ ) {
+      color = RgbColor( 0, 0, 0 );
+      if ( i == nextState )
+      {
+        color = RgbColor( 50, 50, 50 );
+      }
+      strip.SetPixelColor(i, color );
+    }
+  }
+  else if ( currentState == INDIVIDUAL_INDICATE_STATE )
+  {
+    color = RgbColor( 0, 0, 50 );
+    for ( uint8_t i = 0; i < NPLEN; i++ ) {
+      strip.SetPixelColor(i, color );
+    }
+  }
+  else if ( currentState == MESH_INDICATE_STATE )
+  {
+    color = RgbColor( 50, 0, 0 );
+    for ( uint8_t i = 0; i < NPLEN; i++ ) {
+      strip.SetPixelColor(i, color );
+    }
   }
   else
   {
     color = RgbColor( 10, 10, 10 );
   }
 
-  for ( uint8_t i = 0; i < NPLEN; i++ ) {
-    strip.SetPixelColor(i, color );
-  }
+
 
   strip.Show();
 
@@ -173,6 +209,29 @@ void SetState( int next_state )
   currentState = next_state;
 }
 
+void SetMode( application_mode_t new_mode )
+{
+
+  if ( new_mode == AppMode )
+  {
+    return;
+  }
+  
+  nextState = currentState;
+  timeOfNextStateChange = millis() + 1000;
+  if ( new_mode == MODE_MESH )
+  {
+    SetState( MESH_INDICATE_STATE );
+  }
+  else
+  {
+    SetState( INDIVIDUAL_INDICATE_STATE );
+  }
+
+
+  AppMode = new_mode;
+}
+
 void ProcessButton()
 {
   int last_button_state = CurrentButtonState;
@@ -201,19 +260,45 @@ void ProcessButton()
 
 void HandleShortButtonPress()
 {
-  //play an animation #1 for 3 seconds!
-  SetState( 1 );
-  timeOfNextStateChange = millis() + 3000;
-  nextState = 0;
+  if ( timeOfNextStateChange > 0 )
+  {
+    //lets not do anything if a temporary animation is playing.
+    return;
+  }
+
+  //advance to next state!
+  int next_state = currentState + 1;
+  if ( next_state >= NUM_STATES )
+  {
+    next_state = 0;
+  }
+
+  //play an animation for 3 seconds!
+  SetState( ADVANCE_INDICATE_STATE );
+  timeOfNextStateChange = millis() + 1000;
+  nextState = next_state;
 
 }
 
 void HandleLongButtonPress()
 {
-  //play an animation #2 for 3 seconds!
-  SetState( 2 );
-  timeOfNextStateChange = millis() + 3000;
-  nextState = 0;
+  if ( timeOfNextStateChange > 0 )
+  {
+    //lets not do anything if a temporary animation is playing.
+    return;
+  }
+
+  if ( AppMode == MODE_MESH )
+  {
+    SetMode( MODE_INDIVIDUAL );
+
+
+  }
+  else
+  {
+    SetMode( MODE_MESH );
+  }
+
 }
 
 
