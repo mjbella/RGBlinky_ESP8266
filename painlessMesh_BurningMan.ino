@@ -10,8 +10,10 @@
 
 #include <NeoPixelAnimator.h>
 #include <NeoPixelBrightnessBus.h>
-#include <NeoPixelBus.h>
 
+#include "Constants.h"
+#include "AnimationEngine.h"
+#include "CoolAnimations.h"
 
 
 //WIFI stuff
@@ -25,7 +27,7 @@ uint32_t timeOfStateBeginningUs = 0;
 
 // LED stuff
 #define   LEDPIN          4
-#define   NPLEN           4
+
 NeoPixelBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 //NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 
@@ -44,7 +46,8 @@ int CurrentButtonState = BUTTON_IDLE; //active low.
 //timer
 os_timer_t frameTimer;
 boolean on = false;
-
+uint32_t lastFrameTimeMs = 0;
+#define FRAME_RATE 30
 
 //state
 typedef enum { MODE_MESH, MODE_INDIVIDUAL } application_mode_t;
@@ -58,6 +61,8 @@ application_mode_t AppMode = MODE_MESH;
 #define INDIVIDUAL_INDICATE_STATE (NUM_STATES+2)
 #define MESH_INDICATE_STATE (NUM_STATES+3)
 
+
+
 void timerCallback(void *pArg)
 {
   uint32_t node_time_us = mesh.getNodeTime();
@@ -70,6 +75,19 @@ void timerCallback(void *pArg)
 
   uint32_t local_time_ms = (node_time_us - timeOfStateBeginningUs) / 1000ul;
 
+  if( lastFrameTimeMs == 0 )
+  {
+    if( local_time_ms < 31 )
+      lastFrameTimeMs = 1;
+    else
+      lastFrameTimeMs = local_time_ms - 30;
+  }
+
+  Animate( local_time_ms, lastFrameTimeMs );
+
+  lastFrameTimeMs = local_time_ms;
+
+  return;
   //lets say all states cycle every 1 second for now.
   uint32_t ms_per_cycle = 1000;
   uint32_t looped_time_ms = local_time_ms % ms_per_cycle;
@@ -154,10 +172,13 @@ void setup() {
 
   //setup timer
   os_timer_setfn(&frameTimer, timerCallback, NULL);
-  os_timer_arm(&frameTimer, 33, true); //1000ms, repeat = true;
+  os_timer_arm(&frameTimer, 1000 / FRAME_RATE, true); //1000ms, repeat = true;
 
   //setup button.
   pinMode(BUTTON_PIN, INPUT);
+
+  //init our animations!!
+  InitAnimations();
 }
 
 void loop() {

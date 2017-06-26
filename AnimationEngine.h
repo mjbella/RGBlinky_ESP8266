@@ -1,4 +1,9 @@
+#pragma once
+
 // Definitions for the animation engine go here!
+
+#include "Constants.h"
+#include <NeoPixelBus.h>
 
 /* Animation Types
  * Show     - Just update leds based on led data.
@@ -21,8 +26,11 @@ typedef enum {
   bSHIFT,
   DIFFUSE,
   SCRAMB,
-  BLINK
+  BLINK,
+  DELAY
 } animation_effect;
+
+
 
 /* Animation Sequence Format (Struct)
  * Effect Type
@@ -35,15 +43,18 @@ typedef enum {
  * RGB LED Data Array (NeoPixelBus Array)
  */
 typedef struct {
-  animation_effect anim,
-  long N,
-  long duration,
-  long nLoops,
-  int nLEDS,
-  bool repeat,
-  int data_len,
+  animation_effect anim;
+  float N;
+  long duration; //ms
+  long nLoops;
+  int nLEDS;
+  bool repeat;
+  int data_len;
+  HsbColor* HsbData;
   
-}
+} animation_descriptor_t;
 
 
+void StartSequence( animation_descriptor_t* descriptors, int num_descriptors );
 
+void Animate( uint32_t current_time_ms, uint32_t last_time_ms  );
