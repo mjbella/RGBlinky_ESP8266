@@ -11,54 +11,93 @@
 #include <NeoPixelAnimator.h>
 #include <NeoPixelBrightnessBus.h>
 #include <NeoPixelBus.h>
-//#include <math.h>
 
+
+
+//WIFI stuff
 #define   MESH_PREFIX     "RGB_LED"
 #define   MESH_PASSWORD   "BurningMan"
 #define   MESH_PORT       5555
-
-#define   LEDPIN          4
-#define   NPLEN           4
-
-extern int testData[200];
-
 painlessMesh  mesh;
-
 uint32_t sendMessageTime = 0;
 uint32_t sent = 0;
+uint32_t timeOfStateBeginningUs = 0;
 
-// Goertzel library
-int sensorPin = A0;
-const int N = 150;
-const float SAMPLING_FREQUENCY = 8000;
+// LED stuff
+#define   LEDPIN          4
+#define   NPLEN           4
+NeoPixelBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
+//NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 
-//NeoPixelBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
-NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 
-// ADC Data tmp location
-short sound_data[N];
+//Button stuff.
+//button is active low. (idle high)
+# define BUTTON_PIN     0 //GPIO 0, D3, flash button
+#define BUTTON_ACTIVE LOW
+#define BUTTON_IDLE HIGH
+#define SHORT_PRESS_MIN   100
+#define LONG_PRESS_MIN  3000
+unsigned long lastButtonPressTime;
+int CurrentButtonState = BUTTON_IDLE; //active low.
+
 
 //timer
 os_timer_t frameTimer;
 boolean on = false;
 
+
+//state
+typedef enum { MODE_MESH, MODE_INDIVIDUAL } application_mode;
+int currentState = 0;
+
+unsigned long timeOfNextStateChange = 0;
+int nextState = 0;
+
+#define NUM_STATES  3
+
 void timerCallback(void *pArg)
 {
   uint32_t node_time_us = mesh.getNodeTime();
-  uint32_t node_time_ms = node_time_us / 1000ul;
-  uint32_t ms_per_cycle = 5000ul; //5 seconds
-  uint32_t local_ms = node_time_ms % ms_per_cycle;
+  if ( node_time_us < timeOfStateBeginningUs )
+  {
+    //BIG PROBLEMS!
+    timeOfStateBeginningUs = node_time_us; //for now, lets fudge it.
+    return;
+  }
 
-  
+  uint32_t local_time_ms = (node_time_us - timeOfStateBeginningUs) / 1000ul;
+
+  //lets say all states cycle every 1 second for now.
+  uint32_t ms_per_cycle = 1000;
+  uint32_t looped_time_ms = local_time_ms % ms_per_cycle;
+
   //local_ms hopefully should be smooth gradient over 5second
-  uint32_t brightness = local_ms * 255ul / ms_per_cycle;
-  byte brightness8 = brightness;
+  byte brightness = looped_time_ms * 50ul / ms_per_cycle;
+
+
+  RgbColor color;
+  if ( currentState == 0 )
+  {
+    color = RgbColor( brightness, 0, 0 );
+  }
+  else if ( currentState == 1 )
+  {
+    color = RgbColor( 0, brightness, 0 );
+  }
+  else if ( currentState == 2 )
+  {
+    color = RgbColor( 0, 0, brightness );
+  }
+  else
+  {
+    color = RgbColor( 10, 10, 10 );
+  }
 
   for ( uint8_t i = 0; i < NPLEN; i++ ) {
-      strip.SetPixelColor(i, RgbColor( brightness8, brightness8, brightness8 ) );
-    }
+    strip.SetPixelColor(i, color );
+  }
 
-   strip.Show();
+  strip.Show();
 
 }
 
@@ -80,10 +119,19 @@ void setup() {
   //setup timer
   os_timer_setfn(&frameTimer, timerCallback, NULL);
   os_timer_arm(&frameTimer, 33, true); //1000ms, repeat = true;
+
+  //setup button.
+  pinMode(BUTTON_PIN, INPUT);
 }
 
 void loop() {
   mesh.update();
+
+  ProcessButton();
+
+  ProcessAutomaticStateChange();
+
+  return;
 
   // get next random time to send a message
   if ( sendMessageTime == 0 ) {
@@ -100,6 +148,75 @@ void loop() {
 
   //strip.Show();
 }
+
+
+void ProcessAutomaticStateChange()
+{
+  if ( timeOfNextStateChange == 0 )
+  {
+    return;
+  }
+
+  if ( millis() < timeOfNextStateChange )
+  {
+    return;
+  }
+
+  //handle automatic state change!
+  timeOfNextStateChange = 0;
+  SetState( nextState );
+}
+
+void SetState( int next_state )
+{
+  timeOfStateBeginningUs = mesh.getNodeTime();
+  currentState = next_state;
+}
+
+void ProcessButton()
+{
+  int last_button_state = CurrentButtonState;
+  CurrentButtonState = digitalRead(BUTTON_PIN);
+
+  if ( last_button_state == BUTTON_IDLE && CurrentButtonState == BUTTON_ACTIVE )
+  {
+    //active edge.
+    lastButtonPressTime = millis();
+  }
+  else if ( last_button_state == BUTTON_ACTIVE && CurrentButtonState == BUTTON_IDLE )
+  {
+    //inactive edge.
+    unsigned long durration = millis() - lastButtonPressTime;
+    if ( durration > SHORT_PRESS_MIN && durration < LONG_PRESS_MIN )
+    {
+      HandleShortButtonPress();
+    }
+    if ( durration >= LONG_PRESS_MIN )
+    {
+      HandleLongButtonPress();
+    }
+  }
+
+}
+
+void HandleShortButtonPress()
+{
+  //play an animation #1 for 3 seconds!
+  SetState( 1 );
+  timeOfNextStateChange = millis() + 3000;
+  nextState = 0;
+
+}
+
+void HandleLongButtonPress()
+{
+  //play an animation #2 for 3 seconds!
+  SetState( 2 );
+  timeOfNextStateChange = millis() + 3000;
+  nextState = 0;
+}
+
+
 
 void led_pattern() {
   for ( uint8_t i = 0; i < NPLEN; i++ ) {
@@ -122,4 +239,5 @@ void changedConnectionCallback() {
 
 void nodeTimeAdjustedCallback(int32_t offset) {
   Serial.printf("Adjusted time %u. Offset = %d\n", mesh.getNodeTime(), offset);
+  SetState( currentState ); //this triggers the state to restart!
 }
