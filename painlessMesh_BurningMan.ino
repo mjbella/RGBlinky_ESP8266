@@ -12,8 +12,10 @@
 #include <NeoPixelBrightnessBus.h>
 
 #include "Constants.h"
-#include "AnimationEngine.h"
-#include "CoolAnimations.h"
+#include "AnimationEngine.h" //contains Michael's animation engine.
+#include "CoolAnimations.h" //configures Michael's animations.
+#include "MarkAnimations.h" //contains Mark's animation engine.
+#include "StateManager.h" //handles buttons and state changes.
 
 
 //WIFI stuff
@@ -23,7 +25,8 @@
 painlessMesh  mesh;
 uint32_t sendMessageTime = 0;
 uint32_t sent = 0;
-uint32_t timeOfStateBeginningUs = 0;
+volatile bool broadcastNeeded = false;
+
 
 // LED stuff
 #define   LEDPIN          4
@@ -32,16 +35,6 @@ NeoPixelBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 //NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 
 
-//Button stuff.
-//button is active low. (idle high)
-# define BUTTON_PIN     0 //GPIO 0, D3, flash button
-#define BUTTON_ACTIVE LOW
-#define BUTTON_IDLE HIGH
-#define SHORT_PRESS_MIN   100
-#define LONG_PRESS_MIN  3000
-unsigned long lastButtonPressTime;
-int CurrentButtonState = BUTTON_IDLE; //active low.
-
 
 //timer
 os_timer_t frameTimer;
@@ -49,32 +42,21 @@ boolean on = false;
 uint32_t lastFrameTimeMs = 0;
 #define FRAME_RATE 30
 
-//state
-typedef enum { MODE_MESH, MODE_INDIVIDUAL } application_mode_t;
-int currentState = 0;
-unsigned long timeOfNextStateChange = 0;
-int nextState = 0;
-application_mode_t AppMode = MODE_MESH;
 
-#define NUM_STATES  3
-#define ADVANCE_INDICATE_STATE (NUM_STATES+1)
-#define INDIVIDUAL_INDICATE_STATE (NUM_STATES+2)
-#define MESH_INDICATE_STATE (NUM_STATES+3)
-
-
-
-void timerCallback(void *pArg)
+//this function passes off to Michael's animation engine.
+void passToAnimationEngine()
 {
   uint32_t node_time_us = mesh.getNodeTime();
-  if ( node_time_us < timeOfStateBeginningUs )
+
+  uint32_t local_time_ms = node_time_us / 1000ul;
+
+  //just in case the node time ever goes backwards after a sync, lets make sure that lastFrameTimeMs never gets ahead of the real time.
+  if( lastFrameTimeMs >= local_time_ms )
   {
-    //BIG PROBLEMS!
-    timeOfStateBeginningUs = node_time_us; //for now, lets fudge it.
-    return;
+    lastFrameTimeMs = 0;
   }
 
-  uint32_t local_time_ms = (node_time_us - timeOfStateBeginningUs) / 1000ul;
-
+  //this hack simulates the last frame time during the first render. used by animations that need to compute time since last draw.
   if( lastFrameTimeMs == 0 )
   {
     if( local_time_ms < 31 )
@@ -85,83 +67,39 @@ void timerCallback(void *pArg)
 
   Animate( local_time_ms, lastFrameTimeMs );
 
-  lastFrameTimeMs = local_time_ms;
-
-  return;
-  //lets say all states cycle every 1 second for now.
-  uint32_t ms_per_cycle = 1000;
-  uint32_t looped_time_ms = local_time_ms % ms_per_cycle;
-
-  //local_ms hopefully should be smooth gradient over 5second
-  byte brightness = looped_time_ms * 50ul / ms_per_cycle;
-
-
-
-  RgbColor color;
-  if ( currentState == 0 )
-  {
-    color = RgbColor( brightness, 0, 0 );
-    for ( uint8_t i = 0; i < NPLEN; i++ ) {
-      strip.SetPixelColor(i, color );
-    }
-  }
-  else if ( currentState == 1 )
-  {
-    color = RgbColor( 0, brightness, 0 );
-    for ( uint8_t i = 0; i < NPLEN; i++ ) {
-      strip.SetPixelColor(i, color );
-    }
-  }
-  else if ( currentState == 2 )
-  {
-    color = RgbColor( 0, 0, brightness );
-    for ( uint8_t i = 0; i < NPLEN; i++ ) {
-      strip.SetPixelColor(i, color );
-    }
-  }
-  else if ( currentState == ADVANCE_INDICATE_STATE )
-  {
-    for ( uint8_t i = 0; i < NPLEN; i++ ) {
-      color = RgbColor( 0, 0, 0 );
-      if ( i == nextState )
-      {
-        color = RgbColor( 50, 50, 50 );
-      }
-      strip.SetPixelColor(i, color );
-    }
-  }
-  else if ( currentState == INDIVIDUAL_INDICATE_STATE )
-  {
-    color = RgbColor( 0, 0, 50 );
-    for ( uint8_t i = 0; i < NPLEN; i++ ) {
-      strip.SetPixelColor(i, color );
-    }
-  }
-  else if ( currentState == MESH_INDICATE_STATE )
-  {
-    color = RgbColor( 50, 0, 0 );
-    for ( uint8_t i = 0; i < NPLEN; i++ ) {
-      strip.SetPixelColor(i, color );
-    }
-  }
-  else
-  {
-    color = RgbColor( 10, 10, 10 );
-  }
-
-
-
-  strip.Show();
-
+  lastFrameTimeMs = local_time_ms;  
 }
 
-void setup() {
-  Serial.begin(115200);
+void timerCallback(void *pArg)
+{
 
+  //state 1 redirects to Michael's animation engine.
+  if( currentState == 1 )
+  {
+    passToAnimationEngine();
+    return;
+  }
+
+  //all other states are routed to Mark's animation engine.
+  uint32_t node_time_us = mesh.getNodeTime();
+  uint32_t node_time_ms = node_time_us / 1000ul;
+  RenderFrame( node_time_ms, NPLEN, currentState );
+}
+
+
+void InitStrip()
+{
   strip.Begin();
-  led_pattern();
+  //turn off the strip during init.
+  for ( uint8_t i = 0; i < NPLEN; i++ ) {
+    strip.SetPixelColor(i, RgbColor( 0, 0, 0 ) );
+  }
+  strip.Show();
+}
 
-  //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
+void InitMesh()
+{
+ //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
   mesh.setDebugMsgTypes( ERROR | STARTUP );  // set before init() so that you can see startup messages
 
   mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT );
@@ -169,181 +107,121 @@ void setup() {
   mesh.onNewConnection(&newConnectionCallback);
   mesh.onChangedConnections(&changedConnectionCallback);
   mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
+}
 
+void InitTimer()
+{
   //setup timer
   os_timer_setfn(&frameTimer, timerCallback, NULL);
   os_timer_arm(&frameTimer, 1000 / FRAME_RATE, true); //1000ms, repeat = true;
+  
+}
 
-  //setup button.
-  pinMode(BUTTON_PIN, INPUT);
-
-  //init our animations!!
+void setup() {
+  Serial.begin(115200);
+  InitStrip();
+  InitMesh();
+  InitTimer();
+  InitStateManager(BroadcastState);
+  
+  //init Michael's animations
   InitAnimations();
 }
 
 void loop() {
   mesh.update();
 
+  //calls into state management code
   ProcessButton();
 
+  //calls into state management code.
   ProcessAutomaticStateChange();
 
-  return;
-
-  // get next random time to send a message
-  if ( sendMessageTime == 0 ) {
-    sendMessageTime = mesh.getNodeTime() + random( 1000000, 5000000 );
-  }
-
-  // if the time is ripe, send everyone a message!
-  if ( sendMessageTime != 0 && sendMessageTime < mesh.getNodeTime() ) {
-    String msg = "Hello from node ";
-    msg += mesh.getNodeId();
-    mesh.sendBroadcast( msg );
-    sendMessageTime = 0;
-  }
-
-  //strip.Show();
+  ProcessBroadcastFlag();
 }
 
-
-void ProcessAutomaticStateChange()
+void ProcessBroadcastFlag()
 {
-  if ( timeOfNextStateChange == 0 )
-  {
+  if( !broadcastNeeded )
     return;
+
+  uint32_t node_id = mesh.getNodeId();
+  SimpleList<uint32_t> node_list = mesh.getNodeList();
+
+  uint32_t highest_node = node_id;
+  for (SimpleList<uint32_t>::iterator itr = node_list.begin(); itr != node_list.end(); ++itr)
+  {
+    if( *itr > highest_node )
+      highest_node = *itr;
   }
 
-  if ( millis() < timeOfNextStateChange )
+  if( highest_node == node_id )
   {
-    return;
-  }
-
-  //handle automatic state change!
-  timeOfNextStateChange = 0;
-  SetState( nextState );
-}
-
-void SetState( int next_state )
-{
-  timeOfStateBeginningUs = mesh.getNodeTime();
-  currentState = next_state;
-}
-
-void SetMode( application_mode_t new_mode )
-{
-
-  if ( new_mode == AppMode )
-  {
-    return;
-  }
-  
-  nextState = currentState;
-  timeOfNextStateChange = millis() + 1000;
-  if ( new_mode == MODE_MESH )
-  {
-    SetState( MESH_INDICATE_STATE );
+    Serial.println("this is the master node - transmitting state.");
+    BroadcastState(nextState); //beleive it or not, next state always points to a valid animation state. currentState could be status information.
   }
   else
   {
-    SetState( INDIVIDUAL_INDICATE_STATE );
+    Serial.println("this is a slave node - transmitting state.");
   }
 
-
-  AppMode = new_mode;
+  Serial.print("this nodeId: ");
+  Serial.println( node_id );
+  Serial.print("master nodeId: ");
+  Serial.println( highest_node );
+    
+  broadcastNeeded = false;
 }
 
-void ProcessButton()
+void BroadcastState(int state)
 {
-  int last_button_state = CurrentButtonState;
-  CurrentButtonState = digitalRead(BUTTON_PIN);
-
-  if ( last_button_state == BUTTON_IDLE && CurrentButtonState == BUTTON_ACTIVE )
-  {
-    //active edge.
-    lastButtonPressTime = millis();
-  }
-  else if ( last_button_state == BUTTON_ACTIVE && CurrentButtonState == BUTTON_IDLE )
-  {
-    //inactive edge.
-    unsigned long durration = millis() - lastButtonPressTime;
-    if ( durration > SHORT_PRESS_MIN && durration < LONG_PRESS_MIN )
+    String msg = "SET_STATE:";
+    msg += state; 
+    bool success = mesh.sendBroadcast( msg );
+    if( success )
     {
-      HandleShortButtonPress();
+      Serial.print("sent broadcast message: ");
+      Serial.println(msg);
     }
-    if ( durration >= LONG_PRESS_MIN )
+    else
     {
-      HandleLongButtonPress();
+      Serial.println("failed to send broadcast message");
+      Serial.print("failed broadcast message: ");
+      Serial.println(msg);
     }
-  }
-
 }
 
-void HandleShortButtonPress()
+void ParseCommand( String message )
 {
-  if ( timeOfNextStateChange > 0 )
-  {
-    //lets not do anything if a temporary animation is playing.
+  int start_index = message.indexOf(":");
+  if( start_index < 0 )
     return;
-  }
-
-  //advance to next state!
-  int next_state = currentState + 1;
-  if ( next_state >= NUM_STATES )
-  {
-    next_state = 0;
-  }
-
-  //play an animation for 3 seconds!
-  SetState( ADVANCE_INDICATE_STATE );
-  timeOfNextStateChange = millis() + 1000;
-  nextState = next_state;
-
-}
-
-void HandleLongButtonPress()
-{
-  if ( timeOfNextStateChange > 0 )
-  {
-    //lets not do anything if a temporary animation is playing.
-    return;
-  }
-
-  if ( AppMode == MODE_MESH )
-  {
-    SetMode( MODE_INDIVIDUAL );
-
-
-  }
-  else
-  {
-    SetMode( MODE_MESH );
-  }
-
-}
-
-
-
-void led_pattern() {
-  for ( uint8_t i = 0; i < NPLEN; i++ ) {
-    strip.SetPixelColor(i, RgbColor( 50, i * 50, 0 ) );
-  }
-  strip.Show();
+  message.remove(0, start_index+1);
+  int new_state = message.toInt();
+  Serial.print("received new state from the mesh: ");
+  Serial.println(start_index );
+  MeshStateChanged( new_state );
 }
 
 void receivedCallback( uint32_t from, String &msg ) {
   Serial.printf("startHere: Received from %u msg=%s\n", from, msg.c_str());
+  //todo: we should change our state here.
+  
+  ParseCommand( msg );
 }
 
 void newConnectionCallback(uint32_t nodeId) {
   Serial.printf("--> startHere: New Connection, nodeId = %u\n", nodeId);
+  
 }
 
 void changedConnectionCallback() {
   Serial.printf("Changed connections %s\n", mesh.subConnectionJson().c_str());
+  //TODO: if we are the highest node index, we should transmit our state to the network.
+  broadcastNeeded = true;
 }
 
 void nodeTimeAdjustedCallback(int32_t offset) {
   Serial.printf("Adjusted time %u. Offset = %d\n", mesh.getNodeTime(), offset);
-  SetState( currentState ); //this triggers the state to restart!
+  //nothing to do here, all animations handle themselves.
 }
