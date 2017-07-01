@@ -199,7 +199,7 @@ void ParseCommand( String message )
   message.remove(0, start_index+1);
   int new_state = message.toInt();
   Serial.print("received new state from the mesh: ");
-  Serial.println(start_index );
+  Serial.println(new_state );
   MeshStateChanged( new_state );
 }
 
