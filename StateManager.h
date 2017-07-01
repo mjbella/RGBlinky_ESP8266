@@ -29,5 +29,5 @@ extern application_mode_t AppMode;
 void InitStateManager(MeshStateChangeCallbackType callback);
 void ProcessButton();
 void ProcessAutomaticStateChange();
-void SetState( int next_state );
+void SetState( int next_state, bool block_transmit = false );
 void MeshStateChanged( int mesh_state );

@@ -42,15 +42,14 @@ void ProcessAutomaticStateChange()
   SetState( nextState );
 }
 
-void SetState( int next_state )
+void SetState( int next_state, bool block_transmit )
 {
   currentState = next_state;
-  if( AppMode == MODE_MESH && next_state < NUM_STATES ) //filter out status states, only tx real states.
+  if( (AppMode == MODE_MESH) && (next_state < NUM_STATES) && (block_transmit == false) ) //filter out status states, only tx real states.
   {
     meshState = next_state;
     meshCallback( next_state );
   }
-    
 }
 
 void MeshStateChanged( int mesh_state )
@@ -59,7 +58,7 @@ void MeshStateChanged( int mesh_state )
   if( AppMode == MODE_MESH )
   {
     timeOfNextStateChange = 0; //abort any automatic state changes
-    SetState( mesh_state );
+    SetState( mesh_state, true );
   }
 }
 
