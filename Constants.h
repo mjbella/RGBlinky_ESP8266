@@ -1,6 +1,7 @@
 #pragma once
 
-#define   NPLEN           4
+//LED stuff
+#define   NPLEN           20
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
 #include <NeoPixelBrightnessBus.h>

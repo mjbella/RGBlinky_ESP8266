@@ -28,6 +28,8 @@ void StartSequence( animation_descriptor_t* descriptors, int num_descriptors )
   NumDescriptors = num_descriptors;
   CurrentDescriptor = 0;
   DescriptorStartTimeMs = 0;
+  NextDescriptorTimeMs = 0;
+  AutoAdvanceDescriptor = false;
 }
 
 void Animate( uint32_t current_time_ms, uint32_t last_time_ms )
