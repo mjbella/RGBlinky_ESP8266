@@ -29,7 +29,12 @@ volatile bool broadcastNeeded = false;
 
 
 // LED stuff
+#ifdef ARDUINO_ESP8266_ESP01 //detect which board we're using. the little one uses pin 2.
+//note, for the little guy, use DOUT, not DIO for programming.
+#define   LEDPIN          2
+#else
 #define   LEDPIN          4
+#endif
 
 NeoPixelBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 //NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
