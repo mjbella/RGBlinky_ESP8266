@@ -33,8 +33,10 @@ volatile bool broadcastNeeded = false;
 //note, for the little guy, use DOUT, not DIO for programming.
 #define   LEDPIN          2
 #else
-#define   LEDPIN          4
+#define   LEDPIN          D4
 #endif
+
+
 
 NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(MAX_LED_COUNT, LEDPIN);
 //NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(MAX_LED_COUNT, LEDPIN);
@@ -58,12 +60,14 @@ void passToAnimationEngine()
   //just in case the node time ever goes backwards after a sync, lets make sure that lastFrameTimeMs never gets ahead of the real time.
   if ( lastFrameTimeMs >= local_time_ms )
   {
+    Serial.println("lastFrameTimeMs got ahead of the clock.");
     lastFrameTimeMs = 0;
   }
 
   //this hack simulates the last frame time during the first render. used by animations that need to compute time since last draw.
   if ( lastFrameTimeMs == 0 )
   {
+    Serial.println("init lastFrameTimeMs");
     if ( local_time_ms < 31 )
       lastFrameTimeMs = 1;
     else
@@ -77,11 +81,13 @@ void passToAnimationEngine()
 
 void timerCallback(void *pArg)
 {
+  digitalWrite(DEBUG_PIN1, HIGH);
 
   //state 1 redirects to Michael's animation engine.
   if ( currentState == 1 )
   {
     passToAnimationEngine();
+    digitalWrite(DEBUG_PIN1, LOW);
     return;
   }
 
@@ -89,6 +95,7 @@ void timerCallback(void *pArg)
   uint32_t node_time_us = mesh.getNodeTime();
   uint32_t node_time_ms = node_time_us / 1000ul;
   RenderFrame( node_time_ms, GetConfigLedCount(), currentState );
+  digitalWrite(DEBUG_PIN1, LOW);
 }
 
 
@@ -121,20 +128,42 @@ void InitTimer()
 
 }
 
+void InitDebug()
+{
+  pinMode(DEBUG_PIN1, OUTPUT);
+  pinMode(DEBUG_PIN2, OUTPUT);
+  pinMode(DEBUG_PIN3, OUTPUT);
+  pinMode(DEBUG_PIN4, OUTPUT);
+  digitalWrite(DEBUG_PIN1, LOW);
+  digitalWrite(DEBUG_PIN2, LOW);
+  digitalWrite(DEBUG_PIN3, LOW);
+  digitalWrite(DEBUG_PIN4, LOW);
+}
+
 void setup() {
   Serial.begin(115200);
+  Serial.println("\n\nTOP OF SETUP FUNCTION");
+  InitDebug();
+  Serial.println("about to init serial...");
   InitSerialConfig( OnBrightnessChanged, OnLedCountChanged );
+  Serial.println("about to init strip...");
   InitStrip();
+  Serial.println("about to init mesh...");
   InitMesh();
-  InitTimer();
+  Serial.println("about to init state manager...");
   InitStateManager(BroadcastState);
-  
-
   //init Michael's animations
+  Serial.println("about to init animations...");
   InitAnimations();
+  Serial.println("about to init timer...");
+  InitTimer();
+  Serial.println("BOTTOM OF SETUP FUNCTION");
+  
 }
 
 void loop() {
+  //Serial.println("TOP OF LOOP");
+  digitalWrite(DEBUG_PIN4, HIGH);
   mesh.update();
 
   //calls into state management code
@@ -148,6 +177,8 @@ void loop() {
 
   //handles changing the LED count and brightness over the serial port:
   ProcessSerial();
+  digitalWrite(DEBUG_PIN4, LOW);
+  //Serial.println("BOTTOM OF LOOP");
 }
 
 void ProcessBroadcastFlag()

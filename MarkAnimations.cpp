@@ -1,12 +1,13 @@
 #include "Arduino.h"
 #include "StateManager.h"
 #include "MarkAnimations.h"
+#include "Constants.h"
 #include <math.h>
 
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
 #include <NeoPixelBrightnessBus.h>
-extern NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip;
+//extern NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip;
 
 typedef void (*RenderFunctionType)(uint32_t time_ms, int num_leds);
 
@@ -18,8 +19,9 @@ void RenderStarFire( uint32_t time_ms, int num_leds );
 void RenderColorSparkle( uint32_t time_ms, int num_leds );
 void RenderWhiteSparkle( uint32_t time_ms, int num_leds );
 void RenderSpinner( uint32_t time_ms, int num_leds );
+void RenderCurrentTest( uint32_t time_ms, int num_leds );
 
-RenderFunctionType RenderFunctions[] = { RenderRainbow, RenderRainbow, RenderStarFire, RenderColorSparkle, RenderWhiteSparkle, RenderSpinner };
+RenderFunctionType RenderFunctions[] = { RenderRainbow, RenderRainbow, RenderStarFire, RenderColorSparkle, RenderWhiteSparkle, RenderSpinner, RenderCurrentTest };
 
 void RenderFrame( uint32_t time_ms, int num_leds, int state )
 {
@@ -41,7 +43,9 @@ void RenderFrame( uint32_t time_ms, int num_leds, int state )
     RenderMeshState( time_ms, num_leds );
   }
 
+  digitalWrite(DEBUG_PIN3, HIGH);
   strip.Show();
+  digitalWrite(DEBUG_PIN3, LOW);
   
   
   
@@ -92,7 +96,8 @@ void RenderRainbow( uint32_t time_ms, int num_leds )
   const uint32_t period_ms = 1000;
   const uint32_t local_time_ms = time_ms % period_ms;
   float time_fraction = (float)local_time_ms / period_ms;
-  
+
+  digitalWrite( DEBUG_PIN2, HIGH);
   for ( uint8_t i = 0; i < num_leds; i++ ) {
     float hue = (float)i / num_leds + time_fraction;
     hue = hue - (int)hue; //roll off to integer range.
@@ -100,6 +105,7 @@ void RenderRainbow( uint32_t time_ms, int num_leds )
     HsbColor color = HsbColor( hue, 1.0, 0.5 );
     strip.SetPixelColor( i, color );
   }
+  digitalWrite( DEBUG_PIN2, LOW);
 }
 
 //helper
@@ -268,5 +274,44 @@ void RenderSpinner( uint32_t time_ms, int num_leds )
         
       strip.SetPixelColor( i, HsbColor( hue, 1.0, intPower(brightness, 3 ) ) );
     }
+}
+
+void RenderCurrentTest( uint32_t time_ms, int num_leds )
+{
+  //lets do 5 steps for 3 seconds seach of 4 modes:
+  //white, red, green, blue.
+  //20 states, x3 = 60 seconds.
+  const uint32_t state_period = 4;
+  const uint32_t num_levels = 5;
+  const uint32_t period = 4 * num_levels * state_period;
+  uint32_t local_time_s = (time_ms / 1000) % period;
+
+  //Serial.print("local time: ");
+  //Serial.println(local_time_s);
+  //level should cycle 0 to 4, 4 times per cycle.
+  int level = (local_time_s / state_period) % num_levels;
+  int color_state = local_time_s / (num_levels * state_period);
+  //Serial.print("color: ");
+  //Serial.println(color_state);
+  //Serial.print("level: ");
+  //Serial.println(level);
+  int brightness = level * 255 / 4;
+  int r = 0;
+  int g = 0;
+  int b = 0;
+  if (color_state == 0 || color_state == 1 )
+    r = brightness;
+  if (color_state == 0 || color_state == 2 )
+    g = brightness;
+  if (color_state == 0 || color_state == 3 )
+    b = brightness;
+  
+
+  RgbColor color = RgbColor(r, g, b);
+
+  for( int i = 0; i < num_leds; ++i )
+    strip.SetPixelColor(i, color);
+  
+  
 }
 

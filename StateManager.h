@@ -1,7 +1,7 @@
 #pragma once
 
 //state defines
-#define NUM_STATES  6
+#define NUM_STATES  7
 #define ADVANCE_INDICATE_STATE (NUM_STATES+1)
 #define INDIVIDUAL_INDICATE_STATE (NUM_STATES+2)
 #define MESH_INDICATE_STATE (NUM_STATES+3)
