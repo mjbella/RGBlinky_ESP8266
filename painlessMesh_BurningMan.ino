@@ -36,7 +36,7 @@ volatile bool broadcastNeeded = false;
 #define   LEDPIN          4
 #endif
 
-NeoPixelBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 //NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
 
 
@@ -56,15 +56,15 @@ void passToAnimationEngine()
   uint32_t local_time_ms = node_time_us / 1000ul;
 
   //just in case the node time ever goes backwards after a sync, lets make sure that lastFrameTimeMs never gets ahead of the real time.
-  if( lastFrameTimeMs >= local_time_ms )
+  if ( lastFrameTimeMs >= local_time_ms )
   {
     lastFrameTimeMs = 0;
   }
 
   //this hack simulates the last frame time during the first render. used by animations that need to compute time since last draw.
-  if( lastFrameTimeMs == 0 )
+  if ( lastFrameTimeMs == 0 )
   {
-    if( local_time_ms < 31 )
+    if ( local_time_ms < 31 )
       lastFrameTimeMs = 1;
     else
       lastFrameTimeMs = local_time_ms - 30;
@@ -72,14 +72,14 @@ void passToAnimationEngine()
 
   Animate( local_time_ms, lastFrameTimeMs );
 
-  lastFrameTimeMs = local_time_ms;  
+  lastFrameTimeMs = local_time_ms;
 }
 
 void timerCallback(void *pArg)
 {
 
   //state 1 redirects to Michael's animation engine.
-  if( currentState == 1 )
+  if ( currentState == 1 )
   {
     passToAnimationEngine();
     return;
@@ -95,16 +95,15 @@ void timerCallback(void *pArg)
 void InitStrip()
 {
   strip.Begin();
+  strip.SetBrightness( 255 / 5 );
   //turn off the strip during init.
-  for ( uint8_t i = 0; i < NPLEN; i++ ) {
-    strip.SetPixelColor(i, RgbColor( 0, 0, 0 ) );
-  }
+  strip.ClearTo(RgbColor( 0, 0, 0 ) );
   strip.Show();
 }
 
 void InitMesh()
 {
- //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
+  //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
   mesh.setDebugMsgTypes( ERROR | STARTUP );  // set before init() so that you can see startup messages
 
   mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT );
@@ -119,7 +118,7 @@ void InitTimer()
   //setup timer
   os_timer_setfn(&frameTimer, timerCallback, NULL);
   os_timer_arm(&frameTimer, 1000 / FRAME_RATE, true); //1000ms, repeat = true;
-  
+
 }
 
 void setup() {
@@ -128,7 +127,7 @@ void setup() {
   InitMesh();
   InitTimer();
   InitStateManager(BroadcastState);
-  
+
   //init Michael's animations
   InitAnimations();
 }
@@ -147,7 +146,7 @@ void loop() {
 
 void ProcessBroadcastFlag()
 {
-  if( !broadcastNeeded )
+  if ( !broadcastNeeded )
     return;
 
   uint32_t node_id = mesh.getNodeId();
@@ -156,11 +155,11 @@ void ProcessBroadcastFlag()
   uint32_t highest_node = node_id;
   for (SimpleList<uint32_t>::iterator itr = node_list.begin(); itr != node_list.end(); ++itr)
   {
-    if( *itr > highest_node )
+    if ( *itr > highest_node )
       highest_node = *itr;
   }
 
-  if( highest_node == node_id )
+  if ( highest_node == node_id )
   {
     Serial.println("this is the master node - transmitting state.");
     BroadcastState(nextState); //beleive it or not, next state always points to a valid animation state. currentState could be status information.
@@ -174,34 +173,34 @@ void ProcessBroadcastFlag()
   Serial.println( node_id );
   Serial.print("master nodeId: ");
   Serial.println( highest_node );
-    
+
   broadcastNeeded = false;
 }
 
 void BroadcastState(int state)
 {
-    String msg = "SET_STATE:";
-    msg += state; 
-    bool success = mesh.sendBroadcast( msg );
-    if( success )
-    {
-      Serial.print("sent broadcast message: ");
-      Serial.println(msg);
-    }
-    else
-    {
-      Serial.println("failed to send broadcast message");
-      Serial.print("failed broadcast message: ");
-      Serial.println(msg);
-    }
+  String msg = "SET_STATE:";
+  msg += state;
+  bool success = mesh.sendBroadcast( msg );
+  if ( success )
+  {
+    Serial.print("sent broadcast message: ");
+    Serial.println(msg);
+  }
+  else
+  {
+    Serial.println("failed to send broadcast message");
+    Serial.print("failed broadcast message: ");
+    Serial.println(msg);
+  }
 }
 
 void ParseCommand( String message )
 {
   int start_index = message.indexOf(":");
-  if( start_index < 0 )
+  if ( start_index < 0 )
     return;
-  message.remove(0, start_index+1);
+  message.remove(0, start_index + 1);
   int new_state = message.toInt();
   Serial.print("received new state from the mesh: ");
   Serial.println(new_state );
@@ -211,13 +210,13 @@ void ParseCommand( String message )
 void receivedCallback( uint32_t from, String &msg ) {
   Serial.printf("startHere: Received from %u msg=%s\n", from, msg.c_str());
   //todo: we should change our state here.
-  
+
   ParseCommand( msg );
 }
 
 void newConnectionCallback(uint32_t nodeId) {
   Serial.printf("--> startHere: New Connection, nodeId = %u\n", nodeId);
-  
+
 }
 
 void changedConnectionCallback() {

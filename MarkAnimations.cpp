@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "StateManager.h"
 #include "MarkAnimations.h"
-
+#include <math.h>
 
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
@@ -15,8 +15,11 @@ void RenderIndividualState( uint32_t time_ms, int num_leds );
 void RenderMeshState( uint32_t time_ms, int num_leds );
 void RenderRainbow( uint32_t time_ms, int num_leds );
 void RenderStarFire( uint32_t time_ms, int num_leds );
+void RenderColorSparkle( uint32_t time_ms, int num_leds );
+void RenderWhiteSparkle( uint32_t time_ms, int num_leds );
+void RenderSpinner( uint32_t time_ms, int num_leds );
 
-RenderFunctionType RenderFunctions[] = { RenderRainbow, RenderRainbow, RenderStarFire };
+RenderFunctionType RenderFunctions[] = { RenderRainbow, RenderRainbow, RenderStarFire, RenderColorSparkle, RenderWhiteSparkle, RenderSpinner };
 
 void RenderFrame( uint32_t time_ms, int num_leds, int state )
 {
@@ -169,5 +172,101 @@ void RenderStarFire( uint32_t time_ms, int num_leds )
     RenderStarFireFlare(side_length - location, num_leds);
   }
   
+}
+
+void RenderSparkle( uint32_t time_ms, int num_leds, bool use_color )
+{
+  //TODO: lets get way more sparkles, but make more of them dim.
+  
+  //each pixel has a random change of sparkling.
+  //lets say that we want about one third of the strip to sparkle each second on average.
+  const int odds =  30 / 2;
+  
+  
+  for ( uint8_t i = 0; i < num_leds; i++ ) {
+    if( random(odds) == 0 )
+    {
+      //sparkle!  
+      float hue = random(100) / 100.0;
+      float brightness = random(20, 100) / 100.0; //all are at least 50% brightness.
+      brightness = brightness * brightness * brightness * brightness * brightness * brightness;
+      float saturation = random(70, 100) / 100.0; //some color?
+      if( use_color == false ) 
+      {
+          saturation = 0.0;
+          hue = 0.0;
+      }
+      HsbColor color = HsbColor(  hue, saturation, brightness );
+      strip.SetPixelColor( i, color );
+      if( brightness > 0.65 )
+      {
+        //lets glow the neighbors.
+        color = HsbColor(  hue, saturation, brightness / 4.0 );
+        if( i >= 1 )
+        {
+          strip.SetPixelColor( i-1, color );
+        }
+        if( i < (num_leds-1) )
+        {
+          strip.SetPixelColor( i+1, color );
+        }
+      }
+    }
+    else
+    {
+      //decay.
+      RgbColor color = strip.GetPixelColor( i );
+      HsbColor hsb = HsbColor( color );
+      if( hsb.B > 0.0 )
+      {
+        hsb.B = std::max( 0.0, hsb.B - (1.0 / 40) );
+      }
+      strip.SetPixelColor( i, hsb );
+    }
+    
+  }
+
+}
+
+void RenderColorSparkle( uint32_t time_ms, int num_leds )
+{
+  RenderSparkle( time_ms, num_leds, true );
+}
+
+void RenderWhiteSparkle( uint32_t time_ms, int num_leds )
+{
+  RenderSparkle( time_ms, num_leds, false );
+}
+
+float intPower( float value, int times )
+{
+  float original = value;
+  for( int i = 0; i < times-1; ++i )
+    value = value * original;
+  return value;
+}
+
+void RenderSpinner( uint32_t time_ms, int num_leds )
+{
+    //loop every 1 second.
+    float position = (time_ms % 1000) / 1000.0 * (float)num_leds;
+
+    float size = 10.0;
+    float half_size = size / 2.0;
+ 
+    //hue cycles every 10 seconds.
+    float hue = ( time_ms % 10000 ) / 10000.0;
+
+    for( int i = 0; i < num_leds; ++i )
+    {
+      float delta1 = abs(position - (float)i);
+      float delta2 = abs((position+num_leds) - (float)i);
+      float delta3 = abs(position - (float)(i+num_leds));
+      float delta = std::min( delta3, std::min(delta1, delta2) );
+
+      float brightness = std::max( ( half_size - delta, 0.0 ) / half_size;
+        
+      strip.SetPixelColor( i, HsbColor( hue, 1.0, intPower(brightness, 3 ) ) );
+    }
 }
 
