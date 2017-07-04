@@ -1,7 +1,7 @@
 #pragma once
 
 //LED stuff
-#define   NPLEN           20
+#define   MAX_LED_COUNT   120
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
 #include <NeoPixelBrightnessBus.h>

@@ -14,7 +14,7 @@ void InitAnimations()
   //LoadDescriptor.duration;
   //LoadDescriptor.nLoops;
   //LoadDescriptor.nLEDS;
-  //LoadDescriptor.repeat = true;
+  LoadDescriptor.repeat = false;
   LoadDescriptor.data_len = 4;
   LoadDescriptor.HsbData = LoadData;
 
@@ -34,7 +34,7 @@ void InitAnimations()
   DimDescriptor.duration = 4000; //1 s
   DimDescriptor.nLoops = 1;
   //DimDescriptor.nLEDS;
-  //DimDescriptor.repeat = true;
+  DimDescriptor.repeat = false;
   //DimDescriptor.data_len = 4;
   //DimDescriptor.HsbData = LoadData;
 

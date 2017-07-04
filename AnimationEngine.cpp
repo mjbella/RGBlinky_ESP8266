@@ -7,7 +7,7 @@
 //assume led count is defined somewhere.
 //assume we already have a strip from some place.
 
-HsbColor FrameBuffer[NPLEN];
+HsbColor FrameBuffer[MAX_LED_COUNT];
 uint32_t LastFrameTimeMs;
 animation_descriptor_t* DescriptorList;
 int NumDescriptors;
@@ -30,6 +30,10 @@ void StartSequence( animation_descriptor_t* descriptors, int num_descriptors )
   DescriptorStartTimeMs = 0;
   NextDescriptorTimeMs = 0;
   AutoAdvanceDescriptor = false;
+  for( int i = 0; i < MAX_LED_COUNT; ++i )
+  {
+    FrameBuffer[i] = HsbColor(0,0,0);
+  }
 }
 
 void Animate( uint32_t current_time_ms, uint32_t last_time_ms )
@@ -73,7 +77,7 @@ void AnimateShow( animation_descriptor_t* descriptor, uint32_t current_time_ms, 
 {
   Serial.println("show");
     //need to populate entire buffer, or purposely leave values unchanged.
-    for( int i = 0; i < NPLEN; ++i )
+    for( int i = 0; i < MAX_LED_COUNT; ++i )
     {
         if(  (descriptor->repeat == false) && (i >= descriptor->data_len) )
         {
@@ -90,7 +94,7 @@ void AnimateShow( animation_descriptor_t* descriptor, uint32_t current_time_ms, 
 void AnimateBlank( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
 {
   Serial.println("blank");
-    for( int i = 0; i < NPLEN; ++i )
+    for( int i = 0; i < MAX_LED_COUNT; ++i )
     {
         FrameBuffer[i].H = 0;
         FrameBuffer[i].S = 0;
@@ -102,13 +106,16 @@ void AnimateBlank( animation_descriptor_t* descriptor, uint32_t current_time_ms,
 
 void AnimateDim( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
 {
-  Serial.println("dim");
+    Serial.println("dim");
     //only affects brightness.
     float step_size = (current_time_ms - LastFrameTimeMs) * descriptor->N / descriptor->duration;
 
-    for( int i = 0; i < NPLEN; ++i )
+    for( int i = 0; i < MAX_LED_COUNT; ++i )
     {
-        FrameBuffer[i].B = _max( 0, FrameBuffer[i].B - step_size );
+        if(FrameBuffer[i].B > step_size )
+          FrameBuffer[i].B -= step_size;
+        else
+          FrameBuffer[i].B = 0;
     }
     
     WriteFrameBufferToStrip();
@@ -116,13 +123,13 @@ void AnimateDim( animation_descriptor_t* descriptor, uint32_t current_time_ms, u
 
 void WriteFrameBufferToStrip(  )
 {
-    for( int i = 0; i < NPLEN; ++i )
+    for( int i = 0; i < MAX_LED_COUNT; ++i )
     {
-        Serial.print( FrameBuffer[i].H );
-        Serial.print( " " );
-        Serial.print( FrameBuffer[i].S );
-        Serial.print( " " );
-        Serial.println( FrameBuffer[i].B );
+        //Serial.print( FrameBuffer[i].H );
+        //Serial.print( " " );
+        //Serial.print( FrameBuffer[i].S );
+        //Serial.print( " " );
+        //Serial.println( FrameBuffer[i].B );
         strip.SetPixelColor( i, FrameBuffer[i] );
     }
 

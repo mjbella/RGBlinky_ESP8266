@@ -16,7 +16,7 @@
 #include "CoolAnimations.h" //configures Michael's animations.
 #include "MarkAnimations.h" //contains Mark's animation engine.
 #include "StateManager.h" //handles buttons and state changes.
-
+#include "SerialConfig.h" //handles saving and loading settings, as well as getting new settings from the PC.
 
 //WIFI stuff
 #define   MESH_PREFIX     "RGB_LED"
@@ -36,8 +36,8 @@ volatile bool broadcastNeeded = false;
 #define   LEDPIN          4
 #endif
 
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
-//NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(NPLEN, LEDPIN);
+NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(MAX_LED_COUNT, LEDPIN);
+//NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(MAX_LED_COUNT, LEDPIN);
 
 
 
@@ -88,14 +88,14 @@ void timerCallback(void *pArg)
   //all other states are routed to Mark's animation engine.
   uint32_t node_time_us = mesh.getNodeTime();
   uint32_t node_time_ms = node_time_us / 1000ul;
-  RenderFrame( node_time_ms, NPLEN, currentState );
+  RenderFrame( node_time_ms, GetConfigLedCount(), currentState );
 }
 
 
 void InitStrip()
 {
   strip.Begin();
-  strip.SetBrightness( 255 / 20 );
+  strip.SetBrightness( GetConfigBrightness() );
   //turn off the strip during init.
   strip.ClearTo(RgbColor( 0, 0, 0 ) );
   strip.Show();
@@ -123,10 +123,12 @@ void InitTimer()
 
 void setup() {
   Serial.begin(115200);
+  InitSerialConfig( OnBrightnessChanged, OnLedCountChanged );
   InitStrip();
   InitMesh();
   InitTimer();
   InitStateManager(BroadcastState);
+  
 
   //init Michael's animations
   InitAnimations();
@@ -141,7 +143,11 @@ void loop() {
   //calls into state management code.
   ProcessAutomaticStateChange();
 
+  //handles sending the new state to other nodes when the button is pressed.
   ProcessBroadcastFlag();
+
+  //handles changing the LED count and brightness over the serial port:
+  ProcessSerial();
 }
 
 void ProcessBroadcastFlag()
@@ -228,4 +234,20 @@ void changedConnectionCallback() {
 void nodeTimeAdjustedCallback(int32_t offset) {
   Serial.printf("Adjusted time %u. Offset = %d\n", mesh.getNodeTime(), offset);
   //nothing to do here, all animations handle themselves.
+}
+
+void OnBrightnessChanged( uint8_t brightness )
+{
+  Serial.println("brightness changed");
+  strip.SetBrightness( brightness );
+  //strip.Show();
+  
+}
+
+void OnLedCountChanged( uint8_t led_count )
+{
+   Serial.println("led count changed");
+   for( int i = led_count; i < MAX_LED_COUNT; ++i )
+    strip.SetPixelColor( i, RgbColor( 0, 0, 0 ) );
+
 }
