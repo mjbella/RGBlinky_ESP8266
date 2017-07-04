@@ -6,7 +6,7 @@
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
 #include <NeoPixelBrightnessBus.h>
-extern NeoPixelBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip;
+extern NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip;
 
 typedef void (*RenderFunctionType)(uint32_t time_ms, int num_leds);
 
@@ -264,7 +264,7 @@ void RenderSpinner( uint32_t time_ms, int num_leds )
       float delta3 = abs(position - (float)(i+num_leds));
       float delta = std::min( delta3, std::min(delta1, delta2) );
 
-      float brightness = std::max( ( half_size - delta, 0.0 ) / half_size;
+      float brightness = std::max( ( half_size - delta ), (float)0.0 ) / half_size;
         
       strip.SetPixelColor( i, HsbColor( hue, 1.0, intPower(brightness, 3 ) ) );
     }

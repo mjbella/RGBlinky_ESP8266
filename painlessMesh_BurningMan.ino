@@ -95,7 +95,7 @@ void timerCallback(void *pArg)
 void InitStrip()
 {
   strip.Begin();
-  strip.SetBrightness( 255 / 5 );
+  strip.SetBrightness( 255 / 20 );
   //turn off the strip during init.
   strip.ClearTo(RgbColor( 0, 0, 0 ) );
   strip.Show();
