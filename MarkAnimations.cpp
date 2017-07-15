@@ -6,7 +6,7 @@
 #include <NeoPixelBus.h>
 #include <NeoPixelAnimator.h>
 #include <NeoPixelBrightnessBus.h>
-extern NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip;
+extern NeoPixelBrightnessBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip;
 
 typedef void (*RenderFunctionType)(uint32_t time_ms, int num_leds);
 

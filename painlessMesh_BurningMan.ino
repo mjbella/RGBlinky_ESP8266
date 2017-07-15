@@ -19,7 +19,7 @@
 #include "SerialConfig.h" //handles saving and loading settings, as well as getting new settings from the PC.
 
 //WIFI stuff
-#define   MESH_PREFIX     "RGB_LED"
+#define   MESH_PREFIX     "RGB_LED2"
 #define   MESH_PASSWORD   "BurningMan"
 #define   MESH_PORT       5555
 painlessMesh  mesh;
@@ -36,7 +36,7 @@ volatile bool broadcastNeeded = false;
 #define   LEDPIN          4
 #endif
 
-NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Uart800KbpsMethod> strip(MAX_LED_COUNT, LEDPIN);
+NeoPixelBrightnessBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(MAX_LED_COUNT, LEDPIN);
 //NeoPixelBus<NeoRgbFeature, NeoEsp8266Uart800KbpsMethod> strip(MAX_LED_COUNT, LEDPIN);
 
 
