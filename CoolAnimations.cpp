@@ -18,7 +18,7 @@ void InitAnimations()
   LoadDescriptor.data_len = 4;
   LoadDescriptor.HsbData = LoadData;
 
-  for( int i = 0; i < 4; ++i )
+/*  for( int i = 0; i < 4; ++i )
   {
     LoadData[i] = HsbColor( (float)i / 4.0,  1.0, 0.5 );
     Serial.print( LoadData[i].H );
@@ -27,11 +27,16 @@ void InitAnimations()
     Serial.print( " " );
     Serial.println( LoadData[i].B );
   }
+*/
+  LoadData[0] = HsbColor( 0.0, 0.0, 0.0 );
+  LoadData[1] = HsbColor( 0.8, 0.9, 0.75 );
+  LoadData[2] = HsbColor( 0.0, 0.0, 0.0 );
+  LoadData[3] = HsbColor( 0.0, 1.0, 0.5 );
 
-
-  DimDescriptor.anim = DIM;
-  DimDescriptor.N = 0.5;
-  DimDescriptor.duration = 4000; //1 s
+  DimDescriptor.anim = DIFFUSE;
+//  DimDescriptor.anim = DIM;
+  DimDescriptor.N = 0.25;
+  DimDescriptor.duration = 4000; 
   DimDescriptor.nLoops = 1;
   //DimDescriptor.nLEDS;
   DimDescriptor.repeat = false;

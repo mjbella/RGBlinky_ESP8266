@@ -19,8 +19,14 @@ bool AutoAdvanceDescriptor = false;
 void AnimateShow( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms );
 void AnimateBlank( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms );
 void AnimateDim( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms );
+void AnimateSaturate( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms );
+void AnimateShift( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms );
+void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms );
 void WriteFrameBufferToStrip(  );
 void AdvanceDescriptor(uint32_t current_time );
+
+#define twopi 6.2831
+
 
 void StartSequence( animation_descriptor_t* descriptors, int num_descriptors )
 {
@@ -51,8 +57,6 @@ void Animate( uint32_t current_time_ms, uint32_t last_time_ms )
   
   animation_descriptor_t* current_descriptor = DescriptorList + CurrentDescriptor;
 
-  
-  
     LastFrameTimeMs = last_time_ms;
 
     if( current_descriptor->anim == SHOW )
@@ -70,7 +74,18 @@ void Animate( uint32_t current_time_ms, uint32_t last_time_ms )
     {
       AnimateDim(current_descriptor, current_time_ms, last_time_ms);
     }
-
+    else if( current_descriptor->anim == SATURATE)
+    {
+      AnimateSaturate(current_descriptor, current_time_ms, last_time_ms);
+    }
+    else if( current_descriptor->anim == SHIFT)
+    {
+        AnimateShift(current_descriptor, current_time_ms, last_time_ms);
+    }
+    else if( current_descriptor->anim == DIFFUSE)
+    {
+        AnimateDiffuse(current_descriptor, current_time_ms, last_time_ms);
+    }
 }
 
 void AnimateShow( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
@@ -83,7 +98,7 @@ void AnimateShow( animation_descriptor_t* descriptor, uint32_t current_time_ms, 
         {
             return;
         }
-
+        // 
         int lookup_index = i % descriptor->data_len;
         FrameBuffer[i] = descriptor->HsbData[lookup_index];
 
@@ -116,6 +131,56 @@ void AnimateDim( animation_descriptor_t* descriptor, uint32_t current_time_ms, u
           FrameBuffer[i].B -= step_size;
         else
           FrameBuffer[i].B = 0;
+    }
+    
+    WriteFrameBufferToStrip();
+}
+
+void AnimateSaturate( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
+{
+    Serial.println("saturate");
+    // Increases the color saturation by n across duration ms.
+    float step_size = (current_time_ms - LastFrameTimeMs) * descriptor->N / descriptor->duration;
+    for( int i = 0; i < MAX_LED_COUNT; ++i )
+    {
+        FrameBuffer[i].S = FrameBuffer[i].S + step_size;
+        if(FrameBuffer[i].S >= 1.0) FrameBuffer[i].S = 1.0;
+    }
+    WriteFrameBufferToStrip();
+}
+
+void AnimateShift( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
+{
+    Serial.println("shift");
+    //Moves each pixel over one
+    float step_size = (current_time_ms - LastFrameTimeMs) * descriptor->N / descriptor->duration;
+
+    HsbColor tmp = FrameBuffer[MAX_LED_COUNT-1];
+    
+    for( int i = 1; i < MAX_LED_COUNT; ++i )
+    {
+        FrameBuffer[i-1] = FrameBuffer[i];
+    }
+    FrameBuffer[0] = tmp;
+    
+    WriteFrameBufferToStrip();
+}
+
+void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
+{
+    //Blur the pixels into their neighbors.
+    float step_size = (current_time_ms - LastFrameTimeMs) * descriptor->N / descriptor->duration;
+
+    // Copy the buffer
+    // TODO(mbella) Fix this effect to keep a copy of the image to run the kernel across  
+    // TODO(mbella) Don't average in saturation!! Also figure out how to average in hue when the brightness is zero
+    
+    
+    for( int i = 0; i < MAX_LED_COUNT; ++i )
+    {
+        FrameBuffer[i].H = (atan2((cos(FrameBuffer[i+1].H*twopi)) + (cos(FrameBuffer[i].H*twopi)*1.5), (sin(FrameBuffer[i+1].H*twopi)) + (sin(FrameBuffer[i].H*twopi)*1.5))+3.1415)/twopi;
+        FrameBuffer[i].S = (FrameBuffer[i+1].S*0.1 + FrameBuffer[i].S*0.9);
+        FrameBuffer[i].B = (FrameBuffer[i+1].B*0.1 + FrameBuffer[i].B * 0.9);
     }
     
     WriteFrameBufferToStrip();
