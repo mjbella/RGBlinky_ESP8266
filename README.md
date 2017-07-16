@@ -4,7 +4,7 @@ Description
 ===========
 The goal of this ardunio project is to time sync an arbitrary number of nodes
 with ws2812 RGB LEDs. We are using this breakout board
-[HiLetgo-NodeMCU](amazon.com/HiLetgo-Version-NodeMCU-Internet-Development/dp/B010O1G1ES/ref=sr_1_3?s=electronics&ie=UTF8&qid=1500244397&sr=1-3&keywords=nodemcu)
+[HiLetgo-NodeMCU](http://amazon.com/HiLetgo-Version-NodeMCU-Internet-Development/dp/B010O1G1ES/ref=sr_1_3?s=electronics&ie=UTF8&qid=1500244397&sr=1-3&keywords=nodemcu)
 
 Getting Started
 ===============
@@ -12,20 +12,21 @@ Getting Started
 git clone this repo to your machine and rename the parent folder to ''
 
 ## Get the serial port driver
-Depenging on the board you are using you might need to download and install
+Depending on the board you are using you might need to download and install
 a dirver. If you are using the HiLetgo-NodeMCU then you will need to download
 and install the CP2102 driver from SiLabs
 [http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers](http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)
 
 ## Get the libraries
-Download a zip folder of painless mesh from [painlessMesh](https://gitlab.com/BlackEdder/painlessMesh)
-Go to the download logo in the upper right hand corner and select 'Download zip' under source code.
+Download a zip folder of painless mesh from [painlessMesh](https://gitlab.com/BlackEdder/painlessMesh),
+then go to the download logo in the upper right hand corner and select 'Download zip' under source code.
 
-You will need to grab [ArduinoJson](https://github.com/bblanchon/ArduinoJson)
+You will need to grab [ArduinoJson](https://github.com/bblanchon/ArduinoJson). 
 Click on the button that says 'Clone or download' in the right upperhand
 corner, and click Download ZIP.
 
-You will also need to grab [NeoPixelBus](https://github.com/Makuna/NeoPixelBus)
+You will also need to grab
+[NeoPixelBus](https://github.com/Makuna/NeoPixelBus). 
 Click on the button that says 'Clone or download' in the right upperhand
 corner, and click Download ZIP.
 
@@ -40,9 +41,11 @@ Under 'Tools' in your Arduino you need to have the follow settings:
 * CPU Frequency: "80MHz"
 * Flash Size
 * Upload Speed: 115200
-* Port: Pick this setting after you plug your board in an
+* Port: /dev/
 
-
-(The upload speed  might need to be different depending on the board
-  you have)
+The upload speed and port will depend on the exact board you have and on your
+operating system. You should be able to determine the upload speed from the
+documentation for the board you have, and you should see a new device appear in
+the port list after you have the board plugged in and you have the driver
+installed.
 
