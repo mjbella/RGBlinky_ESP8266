@@ -36,16 +36,16 @@ Install all of these zipped libraries into you Arduino environment by going to
 archive you downloaded.
 
 ## Setup the Arduino environment
-Under 'Tools' in your Arduino you need to have the follow settings:
+Under 'Tools' in your Arduino you need to have the following settings:
 * Board: NodeMCU 0.9 (ESP-12 Module)
 * CPU Frequency: "80MHz"
 * Flash Size
 * Upload Speed: 115200
-* Port: /dev/
+* Port: /dev/... or COM...
 
 The upload speed and port will depend on the exact board you have and on your
 operating system. You should be able to determine the upload speed from the
-documentation for the board you have, and you should see a new device appear in
+documentation for the board you have. You should see a new device appear in
 the port list after you have the board plugged in and you have the driver
 installed.
 
