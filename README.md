@@ -2,7 +2,7 @@
 
 Description
 ===========
-The goal of this ardunio project is to time sync an arbitrary number of nodes
+The goal of this Arduino project is to time sync an arbitrary number of nodes
 with ws2812 RGB LEDs. We are using this breakout board
 [HiLetgo-NodeMCU](http://amazon.com/HiLetgo-Version-NodeMCU-Internet-Development/dp/B010O1G1ES/ref=sr_1_3?s=electronics&ie=UTF8&qid=1500244397&sr=1-3&keywords=nodemcu)
 
@@ -13,7 +13,7 @@ git clone this repo to your machine and rename the parent folder to ''
 
 ## Get the serial port driver
 Depending on the board you are using you might need to download and install
-a dirver. If you are using the HiLetgo-NodeMCU then you will need to download
+a driver. If you are using the HiLetgo-NodeMCU then you will need to download
 and install the CP2102 driver from SiLabs
 [http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers](http://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)
 
@@ -31,7 +31,7 @@ Click on the button that says 'Clone or download' in the right upperhand
 corner, and click Download ZIP.
 
 ## Install the libraries
-Install all of these ziped libraries into you Arduino environment by going to
+Install all of these zipped libraries into you Arduino environment by going to
 'Sketch' -> 'Include Library' -> 'Add .ZIP Library...' then select the zip
 archive you downloaded.
 
