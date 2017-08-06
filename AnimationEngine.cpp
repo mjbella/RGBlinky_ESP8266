@@ -171,6 +171,7 @@ void AnimateShift( animation_descriptor_t* descriptor, uint32_t current_time_ms,
     WriteFrameBufferToStrip();
 }
 
+// =========================== for diffuse! =============================
 // https://stackoverflow.com/questions/8424170/1d-linear-convolution-in-ansi-c-code
 void convolve(double Signal[/* SignalLen */], size_t SignalLen,
               double Kernel[/* KernelLen */], size_t KernelLen,
@@ -201,6 +202,7 @@ void sigma_kern(double sigma, double kern[]){
     kern[i] = ( 1 / sqrt(twopi * sigma)) * exp( -0.5f * ( pow(j,2) / pow(sigma,2) ) );
     //Serial.println(kern[i], 6);
   }
+  
   // Normalize the kernel!!! (or else!!)
   for( int i = 0; i < 3; i++) sum += kern[i];
   for( int i = 0; i < 3; i++) kern[i] /= sum;
@@ -208,7 +210,7 @@ void sigma_kern(double sigma, double kern[]){
   
   //Serial.println();
 }
-
+// =========================== for diffuse! =============================
 void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
 {
     //Blur the pixels into their neighbors.

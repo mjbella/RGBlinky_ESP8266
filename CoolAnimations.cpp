@@ -36,7 +36,7 @@ void InitAnimations()
 
   DimDescriptor.anim = DIFFUSE;
 //  DimDescriptor.anim = DIM;
-  DimDescriptor.N = 5;
+  DimDescriptor.N = 3;
   DimDescriptor.duration = 2000; 
   DimDescriptor.nLoops = 1;
   //DimDescriptor.nLEDS;
@@ -46,7 +46,7 @@ void InitAnimations()
 
 // ---------------------------------------
   blinkDescriptor.anim = SATURATE;
-  blinkDescriptor.N = 0.2;
+  blinkDescriptor.N = -2;
   blinkDescriptor.duration = 1000; 
   blinkDescriptor.nLoops = 1;
   //blink2Descriptor.nLEDS;
