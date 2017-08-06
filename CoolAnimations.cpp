@@ -2,7 +2,7 @@
 
 animation_descriptor_t LoadDescriptor;
 animation_descriptor_t DimDescriptor;
-animation_descriptor_t Dim2Descriptor;
+animation_descriptor_t blinkDescriptor;
 
 animation_descriptor_t DiscriptorSet[2];
 
@@ -36,8 +36,8 @@ void InitAnimations()
 
   DimDescriptor.anim = DIFFUSE;
 //  DimDescriptor.anim = DIM;
-  DimDescriptor.N = 0.25;
-  DimDescriptor.duration = 5000; 
+  DimDescriptor.N = 5;
+  DimDescriptor.duration = 2000; 
   DimDescriptor.nLoops = 1;
   //DimDescriptor.nLEDS;
   DimDescriptor.repeat = false;
@@ -45,21 +45,21 @@ void InitAnimations()
   //DimDescriptor.HsbData = LoadData;
 
 // ---------------------------------------
-  Dim2Descriptor.anim = DIM;
-  Dim2Descriptor.N = 0.7;
-  Dim2Descriptor.duration = 5000; 
-  Dim2Descriptor.nLoops = 1;
-  //Dim2Descriptor.nLEDS;
-  Dim2Descriptor.repeat = false;
-  //Dim2Descriptor.data_len = 4;
-  //Dim2Descriptor.HsbData = LoadData;
+  blinkDescriptor.anim = SATURATE;
+  blinkDescriptor.N = 0.2;
+  blinkDescriptor.duration = 1000; 
+  blinkDescriptor.nLoops = 1;
+  //blink2Descriptor.nLEDS;
+  blinkDescriptor.repeat = false;
+  //blinkDescriptor.data_len = 4;
+  //blinkDescriptor.HsbData = LoadData;
 
   DiscriptorSet[0] = LoadDescriptor;
   DiscriptorSet[1] = DimDescriptor;
-  DiscriptorSet[2] = Dim2Descriptor;
+  DiscriptorSet[2] = blinkDescriptor;
   
   
-  StartSequence( DiscriptorSet, 2 );
+  StartSequence( DiscriptorSet, 3 );
   
 }
 

@@ -9,6 +9,7 @@
  * Show     - Just update leds based on led data. (overwrites)
  * Blank    - Set all off (overwrites)
  * Dim      - Decrease each chanel of each led by n (modifies)
+ * Bright   - Increase the brightness of each HSB pixel value. (modifies)
  * Saturate - Increase each LED's color intensity by n (modifies)
  * Shift    - Move the pattern towards the end of the string (modifies)
  * bShift   - Move the pattern towards the front of the string (modifies)
@@ -20,19 +21,27 @@
  * HueShift - Rotate the hue once around the color wheel 
  * Twinkle  - Flash your led data color palette randomly on the strip with a decay effect between flashes.
  * Spazz    - Cycle through your led data color pallette on each LED quickly (out of phase) for a dazling effect) for n ms
+ * add      - Add to all LEDs from led data (modifies)
+ * randadd  - Add random color to a random location (modifies)
  * (ADD MORE NEW ANIMATION TYPES HERE!)
  */
 typedef enum {
   SHOW,
   BLANK,
   DIM,
+  BRIGHT,
   SATURATE,
   SHIFT,
   bSHIFT,
   DIFFUSE,
   SCRAMB,
   BLINK,
-  DELAY
+  DELAY,
+  HUESHIFT,
+  TWINKLE,
+  SPAZZ,
+  ADD,
+  RANDADD
 } animation_effect;
 
 

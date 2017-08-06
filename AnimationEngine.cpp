@@ -25,8 +25,9 @@ void AdvanceDescriptor(uint32_t current_time );
 void convolve(const double Signal[/* SignalLen */], size_t SignalLen,
               const double Kernel[/* KernelLen */], size_t KernelLen,
               double Result[/* SignalLen + KernelLen - 1 */]);
-              
-#define twopi 6.2831
+void sigma_kern(double sigma, double kern[]);
+
+#define twopi 6.2831f
 
 void StartSequence( animation_descriptor_t* descriptors, int num_descriptors )
 {
@@ -85,6 +86,10 @@ void Animate( uint32_t current_time_ms, uint32_t last_time_ms )
     else if( current_descriptor->anim == DIFFUSE)
     {
         AnimateDiffuse(current_descriptor, current_time_ms, last_time_ms);
+    }
+    else if( current_descriptor->anim == RANDADD)
+    {
+      
     }
 }
 
@@ -189,6 +194,20 @@ void convolve(double Signal[/* SignalLen */], size_t SignalLen,
   }
 }
 
+void sigma_kern(double sigma, double kern[]){
+  float j = 0, sum;
+  for( int i = 0; i < 3; i++) {
+    j = (i - 1) / 10.0f;
+    kern[i] = ( 1 / sqrt(twopi * sigma)) * exp( -0.5f * ( pow(j,2) / pow(sigma,2) ) );
+    //Serial.println(kern[i], 6);
+  }
+  // Normalize the kernel!!! (or else!!)
+  for( int i = 0; i < 3; i++) sum += kern[i];
+  for( int i = 0; i < 3; i++) kern[i] /= sum;
+
+  
+  //Serial.println();
+}
 
 void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
 {
@@ -202,7 +221,12 @@ void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_m
     
     //double kernel[] = {0.27901, 0.44198, 0.27901}; // sigma=1
     //double kernel[] = {0.157731, 0.684538, 0.157731}; // sigma=0.5
-    double kernel[] = {0.04779, 0.90442, 0.04779}; // sigma=0.3
+    //double kernel[] = {0.04779, 0.90442, 0.04779}; // sigma=0.3
+    double kernel[3];
+
+    // Calculate our incremental kernel
+    Serial.println(step_size, 6);
+    sigma_kern(step_size, kernel);
 
     //Step 1 convert hsb to rgb
     for(int i=0; i < MAX_LED_COUNT; i++)
