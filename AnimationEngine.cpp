@@ -2,8 +2,6 @@
 
 #include "AnimationEngine.h"
 
-
-
 //assume led count is defined somewhere.
 //assume we already have a strip from some place.
 
@@ -24,9 +22,11 @@ void AnimateShift( animation_descriptor_t* descriptor, uint32_t current_time_ms,
 void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms );
 void WriteFrameBufferToStrip(  );
 void AdvanceDescriptor(uint32_t current_time );
-
+void convolve(const double Signal[/* SignalLen */], size_t SignalLen,
+              const double Kernel[/* KernelLen */], size_t KernelLen,
+              double Result[/* SignalLen + KernelLen - 1 */]);
+              
 #define twopi 6.2831
-
 
 void StartSequence( animation_descriptor_t* descriptors, int num_descriptors )
 {
@@ -166,24 +166,63 @@ void AnimateShift( animation_descriptor_t* descriptor, uint32_t current_time_ms,
     WriteFrameBufferToStrip();
 }
 
+void convolve(const double Signal[/* SignalLen */], size_t SignalLen,
+              const double Kernel[/* KernelLen */], size_t KernelLen,
+              double Result[/* SignalLen + KernelLen - 1 */])
+{
+  size_t n;
+
+  for (n = 0; n < SignalLen + KernelLen - 1; n++)
+  {
+    size_t kmin, kmax, k;
+
+    Result[n] = 0;
+
+    kmin = (n >= KernelLen - 1) ? n - (KernelLen - 1) : 0;
+    kmax = (n < SignalLen - 1) ? n : SignalLen - 1;
+
+    for (k = kmin; k <= kmax; k++)
+    {
+      Result[n] += Signal[k] * Kernel[n - k];
+    }
+  }
+}
+
+
 void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
 {
     //Blur the pixels into their neighbors.
     float step_size = (current_time_ms - LastFrameTimeMs) * descriptor->N / descriptor->duration;
-
-    // Copy the buffer
-    // TODO(mbella) Fix this effect to keep a copy of the image to run the kernel across  
-    // TODO(mbella) Don't average in saturation!! Also figure out how to average in hue when the brightness is zero
+    HsbColor output[MAX_LED_COUNT];
+    RgbColor rgbtmp[MAX_LED_COUNT];
     
+
+    //Step 1 convert hsb to rgb
+    for(int i=0; i < MAX_LED_COUNT; i++)
+    {
+      //output[i] = HsbColor(0,0,0);
+      rgbtmp[i] = RgbColor(FrameBuffer[i]);
+    }
+
+    //TODO Step 2 break rgb appart and run each through the convolution seperately
+    //TODO Step 3 recombine and convert back too hsv
+    
+
     
     for( int i = 0; i < MAX_LED_COUNT; ++i )
+    {
+      FrameBuffer[i] = output[i];
+    }
+    
+    WriteFrameBufferToStrip();
+
+    /*for( int i = 0; i < MAX_LED_COUNT; ++i )
     {
         FrameBuffer[i].H = (atan2((cos(FrameBuffer[i+1].H*twopi)) + (cos(FrameBuffer[i].H*twopi)*1.5), (sin(FrameBuffer[i+1].H*twopi)) + (sin(FrameBuffer[i].H*twopi)*1.5))+3.1415)/twopi;
         FrameBuffer[i].S = (FrameBuffer[i+1].S*0.1 + FrameBuffer[i].S*0.9);
         FrameBuffer[i].B = (FrameBuffer[i+1].B*0.1 + FrameBuffer[i].B * 0.9);
     }
-    
-    WriteFrameBufferToStrip();
+    */
 }
 
 void WriteFrameBufferToStrip(  )
