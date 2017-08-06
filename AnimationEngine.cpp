@@ -166,8 +166,9 @@ void AnimateShift( animation_descriptor_t* descriptor, uint32_t current_time_ms,
     WriteFrameBufferToStrip();
 }
 
-void convolve(const double Signal[/* SignalLen */], size_t SignalLen,
-              const double Kernel[/* KernelLen */], size_t KernelLen,
+// https://stackoverflow.com/questions/8424170/1d-linear-convolution-in-ansi-c-code
+void convolve(double Signal[/* SignalLen */], size_t SignalLen,
+              double Kernel[/* KernelLen */], size_t KernelLen,
               double Result[/* SignalLen + KernelLen - 1 */])
 {
   size_t n;
@@ -193,36 +194,39 @@ void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_m
 {
     //Blur the pixels into their neighbors.
     float step_size = (current_time_ms - LastFrameTimeMs) * descriptor->N / descriptor->duration;
-    HsbColor output[MAX_LED_COUNT];
-    RgbColor rgbtmp[MAX_LED_COUNT];
     
+    HsbColor output[MAX_LED_COUNT];
+    RgbColor tmp;
+    double R[MAX_LED_COUNT], G[MAX_LED_COUNT], B[MAX_LED_COUNT];
+    double Rc[MAX_LED_COUNT + 2], Gc[MAX_LED_COUNT + 2], Bc[MAX_LED_COUNT + 2];
+    
+    //double kernel[] = {0.27901, 0.44198, 0.27901}; // sigma=1
+    //double kernel[] = {0.157731, 0.684538, 0.157731}; // sigma=0.5
+    double kernel[] = {0.04779, 0.90442, 0.04779}; // sigma=0.3
 
     //Step 1 convert hsb to rgb
     for(int i=0; i < MAX_LED_COUNT; i++)
     {
       //output[i] = HsbColor(0,0,0);
-      rgbtmp[i] = RgbColor(FrameBuffer[i]);
+       tmp = RgbColor(FrameBuffer[i]);
+       // Step 2 split the rgb values into their own arrays
+       R[i] = tmp.R;
+       G[i] = tmp.G;
+       B[i] = tmp.B;
     }
 
-    //TODO Step 2 break rgb appart and run each through the convolution seperately
-    //TODO Step 3 recombine and convert back too hsv
+    //TODO Step 3 run R G and B through a convolution seperately
+    convolve(R, MAX_LED_COUNT, kernel, 3, Rc);
+    convolve(G, MAX_LED_COUNT, kernel, 3, Gc);
+    convolve(B, MAX_LED_COUNT, kernel, 3, Bc);
     
-
-    
+    //TODO Step 4 recombine and convert back too hsv
     for( int i = 0; i < MAX_LED_COUNT; ++i )
     {
-      FrameBuffer[i] = output[i];
+      FrameBuffer[i] = HsbColor(RgbColor(Rc[i+1], Gc[i+1], Bc[i+1]));
     }
     
     WriteFrameBufferToStrip();
-
-    /*for( int i = 0; i < MAX_LED_COUNT; ++i )
-    {
-        FrameBuffer[i].H = (atan2((cos(FrameBuffer[i+1].H*twopi)) + (cos(FrameBuffer[i].H*twopi)*1.5), (sin(FrameBuffer[i+1].H*twopi)) + (sin(FrameBuffer[i].H*twopi)*1.5))+3.1415)/twopi;
-        FrameBuffer[i].S = (FrameBuffer[i+1].S*0.1 + FrameBuffer[i].S*0.9);
-        FrameBuffer[i].B = (FrameBuffer[i+1].B*0.1 + FrameBuffer[i].B * 0.9);
-    }
-    */
 }
 
 void WriteFrameBufferToStrip(  )

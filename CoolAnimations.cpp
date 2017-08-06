@@ -29,15 +29,15 @@ void InitAnimations()
     Serial.println( LoadData[i].B );
   }
 */
-  LoadData[0] = HsbColor( 0.0, 0.0, 0.0 );
-  LoadData[1] = HsbColor( 0.5, 1.0, 1.0 );
+  LoadData[0] = HsbColor( 0.11, 1.0, 1.0 );
+  LoadData[1] = HsbColor( 0.0, 0.0, 0.0 );
   LoadData[2] = HsbColor( 0.0, 0.0, 0.0 );
-  LoadData[3] = HsbColor( 0.0, 1.0, 0.5 );
+  LoadData[3] = HsbColor( 0.75, 1.0, 1.0 );
 
   DimDescriptor.anim = DIFFUSE;
 //  DimDescriptor.anim = DIM;
   DimDescriptor.N = 0.25;
-  DimDescriptor.duration = 2000; 
+  DimDescriptor.duration = 5000; 
   DimDescriptor.nLoops = 1;
   //DimDescriptor.nLEDS;
   DimDescriptor.repeat = false;
@@ -46,7 +46,7 @@ void InitAnimations()
 
 // ---------------------------------------
   Dim2Descriptor.anim = DIM;
-  Dim2Descriptor.N = 0.5;
+  Dim2Descriptor.N = 0.7;
   Dim2Descriptor.duration = 5000; 
   Dim2Descriptor.nLoops = 1;
   //Dim2Descriptor.nLEDS;
