@@ -1,6 +1,8 @@
 #include <math.h>
 
 #include "AnimationEngine.h"
+#include <math.h>
+#define KERN_LEN 3
 
 //assume led count is defined somewhere.
 //assume we already have a strip from some place.
@@ -26,6 +28,7 @@ void convolve(const double Signal[/* SignalLen */], size_t SignalLen,
               const double Kernel[/* KernelLen */], size_t KernelLen,
               double Result[/* SignalLen + KernelLen - 1 */]);
 void sigma_kern(double sigma, double kern[]);
+void AnimateAdd( animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms );
 
 #define twopi 6.2831f
 
@@ -55,7 +58,7 @@ void Animate( uint32_t current_time_ms, uint32_t last_time_ms )
     AdvanceDescriptor(current_time_ms);
   }
 
-  
+
   animation_descriptor_t* current_descriptor = DescriptorList + CurrentDescriptor;
 
     LastFrameTimeMs = last_time_ms;
@@ -73,11 +76,11 @@ void Animate( uint32_t current_time_ms, uint32_t last_time_ms )
     }
     else if( current_descriptor->anim == DIM )
     {
-      AnimateDim(current_descriptor, current_time_ms, last_time_ms);
+        AnimateDim(current_descriptor, current_time_ms, last_time_ms);
     }
     else if( current_descriptor->anim == SATURATE)
     {
-      AnimateSaturate(current_descriptor, current_time_ms, last_time_ms);
+        AnimateSaturate(current_descriptor, current_time_ms, last_time_ms);
     }
     else if( current_descriptor->anim == SHIFT)
     {
@@ -87,9 +90,9 @@ void Animate( uint32_t current_time_ms, uint32_t last_time_ms )
     {
         AnimateDiffuse(current_descriptor, current_time_ms, last_time_ms);
     }
-    else if( current_descriptor->anim == RANDADD)
+    else if( current_descriptor->anim == ADD)
     {
-      
+        AnimateAdd(current_descriptor, current_time_ms, last_time_ms);
     }
 }
 
@@ -103,7 +106,7 @@ void AnimateShow( animation_descriptor_t* descriptor, uint32_t current_time_ms, 
         {
             return;
         }
-        // 
+        //
         int lookup_index = i % descriptor->data_len;
         FrameBuffer[i] = descriptor->HsbData[lookup_index];
 
@@ -137,7 +140,7 @@ void AnimateDim( animation_descriptor_t* descriptor, uint32_t current_time_ms, u
         else
           FrameBuffer[i].B = 0;
     }
-    
+
     WriteFrameBufferToStrip();
 }
 
@@ -161,13 +164,13 @@ void AnimateShift( animation_descriptor_t* descriptor, uint32_t current_time_ms,
     float step_size = (current_time_ms - LastFrameTimeMs) * descriptor->N / descriptor->duration;
 
     HsbColor tmp = FrameBuffer[MAX_LED_COUNT-1];
-    
+
     for( int i = 1; i < MAX_LED_COUNT; ++i )
     {
         FrameBuffer[i-1] = FrameBuffer[i];
     }
     FrameBuffer[0] = tmp;
-    
+
     WriteFrameBufferToStrip();
 }
 
@@ -197,17 +200,17 @@ void convolve(double Signal[/* SignalLen */], size_t SignalLen,
 
 void sigma_kern(double sigma, double kern[]){
   float j = 0, sum;
-  for( int i = 0; i < 3; i++) {
+  for( int i = 0; i < KERN_LEN; i++) {
     j = (i - 1) / 10.0f;
     kern[i] = ( 1 / sqrt(twopi * sigma)) * exp( -0.5f * ( pow(j,2) / pow(sigma,2) ) );
     //Serial.println(kern[i], 6);
   }
-  
-  // Normalize the kernel!!! (or else!!)
-  for( int i = 0; i < 3; i++) sum += kern[i];
-  for( int i = 0; i < 3; i++) kern[i] /= sum;
 
-  
+  // Normalize the kernel!!! (or else things get wacky!!)
+  for( int i = 0; i < KERN_LEN; i++) sum += kern[i];
+  //sum *= 0.9;
+  for( int i = 0; i < KERN_LEN; i++) kern[i] /= sum;
+
   //Serial.println();
 }
 // =========================== for diffuse! =============================
@@ -215,25 +218,24 @@ void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_m
 {
     //Blur the pixels into their neighbors.
     float step_size = (current_time_ms - LastFrameTimeMs) * descriptor->N / descriptor->duration;
-    
+
     HsbColor output[MAX_LED_COUNT];
     RgbColor tmp;
     double R[MAX_LED_COUNT], G[MAX_LED_COUNT], B[MAX_LED_COUNT];
     double Rc[MAX_LED_COUNT + 2], Gc[MAX_LED_COUNT + 2], Bc[MAX_LED_COUNT + 2];
-    
+
     //double kernel[] = {0.27901, 0.44198, 0.27901}; // sigma=1
     //double kernel[] = {0.157731, 0.684538, 0.157731}; // sigma=0.5
     //double kernel[] = {0.04779, 0.90442, 0.04779}; // sigma=0.3
-    double kernel[3];
 
+    double kernel[KERN_LEN]; // For a Kernel generated from the timestep!
     // Calculate our incremental kernel
     Serial.println(step_size, 6);
     sigma_kern(step_size, kernel);
 
-    //Step 1 convert hsb to rgb
     for(int i=0; i < MAX_LED_COUNT; i++)
     {
-      //output[i] = HsbColor(0,0,0);
+       //Step 1 convert hsb to rgb
        tmp = RgbColor(FrameBuffer[i]);
        // Step 2 split the rgb values into their own arrays
        R[i] = tmp.R;
@@ -242,17 +244,66 @@ void AnimateDiffuse( animation_descriptor_t* descriptor, uint32_t current_time_m
     }
 
     //TODO Step 3 run R G and B through a convolution seperately
-    convolve(R, MAX_LED_COUNT, kernel, 3, Rc);
-    convolve(G, MAX_LED_COUNT, kernel, 3, Gc);
-    convolve(B, MAX_LED_COUNT, kernel, 3, Bc);
-    
+    convolve(R, MAX_LED_COUNT, kernel, KERN_LEN, Rc);
+    convolve(G, MAX_LED_COUNT, kernel, KERN_LEN, Gc);
+    convolve(B, MAX_LED_COUNT, kernel, KERN_LEN, Bc);
+
     //TODO Step 4 recombine and convert back too hsv
     for( int i = 0; i < MAX_LED_COUNT; ++i )
     {
       FrameBuffer[i] = HsbColor(RgbColor(Rc[i+1], Gc[i+1], Bc[i+1]));
     }
-    
+
     WriteFrameBufferToStrip();
+}
+
+void AnimateAdd(animation_descriptor_t* descriptor, uint32_t current_time_ms, uint32_t last_time_ms )
+{
+  Serial.println("add");
+  //need to populate entire buffer, or purposely leave values unchanged.
+  for( int i = 0; i < MAX_LED_COUNT; ++i )
+  {
+      if(  (descriptor->repeat == false) && (i >= descriptor->data_len) )
+      {
+          return;
+      }
+      //
+      int lookup_index = i % descriptor->data_len;
+
+      int tmpS, tmpB;
+      tmpS = FrameBuffer[i].S + descriptor->HsbData[lookup_index].S;
+      tmpS = _max(0.0, tmpS);
+      tmpS = _min(1.0, tmpS);
+      tmpB = FrameBuffer[i].B + descriptor->HsbData[lookup_index].B;
+      tmpB = _max(0.0, tmpB);
+      tmpB = _min(1.0, tmpB);
+
+      FrameBuffer[i] = HsbColor::LinearBlend<NeoHueBlendShortestDistance>(FrameBuffer[i], descriptor->HsbData[lookup_index], 0.5);
+      FrameBuffer[i].S = tmpS;
+      FrameBuffer[i].S = tmpB;
+  }
+    WriteFrameBufferToStrip();
+}
+
+void AnimateScramble(animation_descriptor_t descriptor, uint32_t current_time_ms, uint32_t last_time_ms)
+{
+
+  uint32_t i = random(MAX_LED_COUNT);
+  uint32_t j = random(MAX_LED_COUNT);
+
+  if (i == j) j++;
+
+  // Swap index i and j!
+  HsbColor t = FrameBuffer[j];
+  FrameBuffer[j] = FrameBuffer[i];
+  FrameBuffer[i] = t;
+
+  WriteFrameBufferToStrip();
+}
+
+void AnimateBlink(animation_descriptor_t descriptor, uint32_t current_time_ms, uint32_t last_time_ms)
+{
+
 }
 
 void WriteFrameBufferToStrip(  )
@@ -297,4 +348,3 @@ void AdvanceDescriptor( uint32_t current_time )
   DescriptorStartTimeMs = current_time;
   CurrentDescriptor = next_descriptor_index;
 }
-
