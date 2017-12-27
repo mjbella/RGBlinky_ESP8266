@@ -43,9 +43,9 @@ void RenderFrame( uint32_t time_ms, int num_leds, int state )
     RenderMeshState( time_ms, num_leds );
   }
 
-  digitalWrite(DEBUG_PIN3, HIGH);
+  DebugWrite(DEBUG_PIN3, HIGH);
   strip.Show();
-  digitalWrite(DEBUG_PIN3, LOW);
+  DebugWrite(DEBUG_PIN3, LOW);
   
   
   
@@ -97,7 +97,7 @@ void RenderRainbow( uint32_t time_ms, int num_leds )
   const uint32_t local_time_ms = time_ms % period_ms;
   float time_fraction = (float)local_time_ms / period_ms;
 
-  digitalWrite( DEBUG_PIN2, HIGH);
+  DebugWrite( DEBUG_PIN2, HIGH);
   for ( uint8_t i = 0; i < num_leds; i++ ) {
     float hue = (float)i / num_leds + time_fraction;
     hue = hue - (int)hue; //roll off to integer range.
@@ -105,7 +105,7 @@ void RenderRainbow( uint32_t time_ms, int num_leds )
     HsbColor color = HsbColor( hue, 1.0, 0.5 );
     strip.SetPixelColor( i, color );
   }
-  digitalWrite( DEBUG_PIN2, LOW);
+  DebugWrite( DEBUG_PIN2, LOW);
 }
 
 //helper

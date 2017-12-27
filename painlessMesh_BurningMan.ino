@@ -81,13 +81,13 @@ void passToAnimationEngine()
 
 void timerCallback(void *pArg)
 {
-  digitalWrite(DEBUG_PIN1, HIGH);
+  DebugWrite(DEBUG_PIN1, HIGH);
 
   //state 1 redirects to Michael's animation engine.
   if ( currentState == 1 )
   {
     passToAnimationEngine();
-    digitalWrite(DEBUG_PIN1, LOW);
+    DebugWrite(DEBUG_PIN1, LOW);
     return;
   }
 
@@ -95,7 +95,7 @@ void timerCallback(void *pArg)
   uint32_t node_time_us = mesh.getNodeTime();
   uint32_t node_time_ms = node_time_us / 1000ul;
   RenderFrame( node_time_ms, GetConfigLedCount(), currentState );
-  digitalWrite(DEBUG_PIN1, LOW);
+  DebugWrite(DEBUG_PIN1, LOW);
 }
 
 
@@ -130,6 +130,7 @@ void InitTimer()
 
 void InitDebug()
 {
+#ifndef ARDUINO_ESP8266_ESP01 
   pinMode(DEBUG_PIN1, OUTPUT);
   pinMode(DEBUG_PIN2, OUTPUT);
   pinMode(DEBUG_PIN3, OUTPUT);
@@ -138,6 +139,14 @@ void InitDebug()
   digitalWrite(DEBUG_PIN2, LOW);
   digitalWrite(DEBUG_PIN3, LOW);
   digitalWrite(DEBUG_PIN4, LOW);
+#endif
+}
+
+void DebugWrite(int pin, int value )
+{
+#ifndef ARDUINO_ESP8266_ESP01 
+  digitalWrite(pin, value);
+#endif
 }
 
 void setup() {
@@ -163,7 +172,7 @@ void setup() {
 
 void loop() {
   //Serial.println("TOP OF LOOP");
-  digitalWrite(DEBUG_PIN4, HIGH);
+  DebugWrite(DEBUG_PIN4, HIGH);
   mesh.update();
 
   //calls into state management code
@@ -177,7 +186,7 @@ void loop() {
 
   //handles changing the LED count and brightness over the serial port:
   ProcessSerial();
-  digitalWrite(DEBUG_PIN4, LOW);
+  DebugWrite(DEBUG_PIN4, LOW);
   //Serial.println("BOTTOM OF LOOP");
 }
 
